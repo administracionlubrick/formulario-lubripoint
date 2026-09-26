@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lubripoint | Agenda tu Cita de Cambio de Aceite y Mantenimiento</title>
+  <meta name="description" content="Agenda tu cita de cambio de aceite y mantenimiento para carro o moto en Lubripoint. Rápido, fácil y sin filas.">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="background-glow top-left"></div>
+  <div class="background-glow bottom-right"></div>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="logo-badge">
+          <i class="fa-solid fa-oil-well"></i>
+        </div>
+        <div>
+          <h1 class="brand-title">LUBRI<span>POINT</span></h1>
+          <p class="brand-subtitle">Servicio de Lubricación & Taller Experto</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="btn-admin-view" onclick="toggleAdminModal()">
+          <i class="fa-solid fa-clipboard-list"></i> Panel Citas Taller
+        </button>
+        <div class="header-status">
+          <span class="status-dot"></span>
+          <span>Atención hoy: 8:00 AM - 6:00 PM</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-content">
+    <div class="booking-wrapper">
+      
+      <!-- Stepper Indicator -->
+      <div class="stepper-container">
+        <div class="step-item active" data-step="1">
+          <div class="step-circle"><i class="fa-solid fa-car-side"></i></div>
+          <span class="step-label">1. Vehículo</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step-item" data-step="2">
+          <div class="step-circle"><i class="fa-solid fa-gears"></i></div>
+          <span class="step-label">2. Servicio & Aceite</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step-item" data-step="3">
+          <div class="step-circle"><i class="fa-solid fa-calendar-check"></i></div>
+          <span class="step-label">3. Fecha & Hora</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step-item" data-step="4">
+          <div class="step-circle"><i class="fa-solid fa-user-check"></i></div>
+          <span class="step-label">4. Contacto</span>
+        </div>
+      </div>
+
+      <!-- Form Card -->
+      <div class="booking-card">
+        <form id="bookingForm" autocomplete="off">
+          
+          <!-- STEP 1: VEHÍCULO -->
+          <section class="wizard-step active" id="step1">
+            <div class="step-heading">
+              <h2>¿Qué vehículo vamos a atender?</h2>
+              <p>Selecciona la categoría e indícanos los datos del vehículo para tener listo el filtro y espacio.</p>
+            </div>
+
+            <!-- Vehicle Type Selector -->
+            <div class="type-selector-grid">
+              <label class="type-card selected" for="typeCar">
+                <input type="radio" id="typeCar" name="vehicleType" value="Carro" checked>
+                <div class="card-icon"><i class="fa-solid fa-car"></i></div>
+                <div class="card-text">
+                  <h3>Carro / Camioneta</h3>
+                  <span>Automóvil, Campero, SUV</span>
+                </div>
+                <div class="card-radio-check"><i class="fa-solid fa-check"></i></div>
+              </label>
+
+              <label class="type-card" for="typeMoto">
+                <input type="radio" id="typeMoto" name="vehicleType" value="Moto">
+                <div class="card-icon"><i class="fa-solid fa-motorcycle"></i></div>
+                <div class="card-text">
+                  <h3>Motocicleta</h3>
+                  <span>Scooter, Sport, Urbana, Enduro</span>
+                </div>
+                <div class="card-radio-check"><i class="fa-solid fa-check"></i></div>
+              </label>
+            </div>
+
+            <!-- Vehicle Details with Dynamic Selects -->
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="brandSelect">Marca <span class="required">*</span></label>
+                <div class="input-box">
+                  <i class="fa-solid fa-tag"></i>
+                  <select id="brandSelect" name="brand" required>
+                    <option value="">Selecciona la marca...</option>
+                    <!-- Populated by JS based on Carro / Moto -->
+                  </select>
+                </div>
+              </div>
+
+              <!-- Custom Brand input (if "Otro" is chosen) -->
+              <div class="form-group" id="customBrandGroup" style="display: none;">
+                <label for="customBrand">Escribe la marca <span class="required">*</span></label>
+                <div class="input-box">
+                  <i class="fa-solid fa-pen"></i>
+                  <input type="text" id="customBrand" name="customBrand" placeholder="Ej. MG, Changan, Bajaj...">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="modelSelect">Línea / Modelo <span class="required">*</span></label>
+                <div class="input-box">
+                  <i class="fa-solid fa-car-rear"></i>
+                  <select id="modelSelect" name="model" required>
+                    <option value="">Selecciona primero la marca...</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Custom Model input (if "Otro" is chosen) -->
+              <div class="form-group" id="customModelGroup" style="display: none;">
+                <label for="customModel">Escribe el modelo <span class="required">*</span></label>
+                <div class="input-box">
+                  <i class="fa-solid fa-pen"></i>
+                  <input type="text" id="customModel" name="customModel" placeholder="Ej. Swift, Stepway, FZ 2.0...">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="yearSelect">Año / Modelo <span class="required">*</span></label>
+                <div class="input-box">
+                  <i class="fa-solid fa-calendar"></i>
+                  <select id="yearSelect" name="year" required>
+                    <option value="">Selecciona el año...</option>
+                    <!-- Populated dynamically 2026 to 1995 -->
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="plate">Placa o últimos 3 dígitos <span class="optional-badge">(Opcional)</span></label>
+                <div class="input-box">
+                  <i class="fa-solid fa-id-card"></i>
+                  <input type="text" id="plate" name="plate" placeholder="Ej. ABC123 o 123" maxlength="7" style="text-transform: uppercase;">
+                </div>
+                <span class="field-hint"><i class="fa-solid fa-lock"></i> Solo para ubicar tu turno al llegar al taller. No compartimos tus datos.</span>
+              </div>
+
+              <div class="form-group full-width">
+                <label for="mileage">Kilometraje Aproximado <span class="optional-badge">(Opcional)</span></label>
+                <div class="input-box">
+                  <i class="fa-solid fa-gauge-high"></i>
+                  <input type="text" id="mileage" name="mileage" placeholder="Ej. 45.000 km">
+                </div>
+                <span class="field-hint">Permite saber si se aproxima cambio de filtros adicionales o bujías</span>
+              </div>
+            </div>
+
+            <div class="step-actions right-only">
+              <button type="button" class="btn btn-primary" onclick="goToStep(2)">
+                Siguiente: Servicio & Aceite <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+          </section>
+
+          <!-- STEP 2: SERVICIO & ACEITE -->
+          <section class="wizard-step" id="step2">
+            <div class="step-heading">
+              <h2>¿Qué servicio y aceite prefieres?</h2>
+              <p>Elige el tipo de intervención técnica y la especificación de aceite de tu preferencia.</p>
+            </div>
+
+            <!-- Service Options Cards -->
+            <div class="service-cards-grid">
+              <label class="service-card selected" for="srvOil">
+                <input type="radio" id="srvOil" name="servicePackage" value="Cambio de Aceite y Filtro" checked>
+                <div class="service-badge">Más popular</div>
+                <div class="service-icon"><i class="fa-solid fa-oil-can"></i></div>
+                <h3>Cambio de Aceite & Filtro</h3>
+                <p>Drenado profesional, reemplazo de filtro de aceite y lubricante nuevo homologado.</p>
+                <div class="service-check"><i class="fa-solid fa-circle-check"></i></div>
+              </label>
+
+              <label class="service-card" for="srvFull">
+                <input type="radio" id="srvFull" name="servicePackage" value="Mantenimiento Preventivo Integral">
+                <div class="service-icon"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+                <h3>Mantenimiento Preventivo</h3>
+                <p>Cambio de aceite, filtro, revisión de niveles de fluidos, frenos y estado general.</p>
+                <div class="service-check"><i class="fa-solid fa-circle-check"></i></div>
+              </label>
+
+              <label class="service-card" for="srvFilters">
+                <input type="radio" id="srvFilters" name="servicePackage" value="Cambio de Filtros (Aire / Cabina / Combustible)">
+                <div class="service-icon"><i class="fa-solid fa-fan"></i></div>
+                <h3>Cambio de Filtros</h3>
+                <p>Revisión y sustitución de filtro de aire de motor, cabina o gasolina.</p>
+                <div class="service-check"><i class="fa-solid fa-circle-check"></i></div>
+              </label>
+
+              <label class="service-card" for="srvDiag">
+                <input type="radio" id="srvDiag" name="servicePackage" value="Revisión General / Diagnóstico">
+                <div class="service-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
+                <h3>Revisión / Diagnóstico</h3>
+                <p>Chequeo de ruidos, fugas, nivel o estado de fluidos antes de viajar.</p>
+                <div class="service-check"><i class="fa-solid fa-circle-check"></i></div>
+              </label>
+            </div>
+
+            <!-- SECCIÓN: ESPECIFICACIONES DE ACEITE -->
+            <div class="oil-preference-box">
+              <div class="box-title">
+                <i class="fa-solid fa-droplet"></i>
+                <div>
+                  <h4>Preferencia de Aceite (Calibre / Viscosidad y Marca)</h4>
+                  <p>Si no estás seguro, puedes seleccionar <em>"No estoy seguro / Asesoría en taller"</em> y nuestros técnicos revisarán el manual de tu vehículo.</p>
+                </div>
+              </div>
+
+              <div class="form-grid">
+                <!-- Calibre / Viscosidad -->
+                <div class="form-group">
+                  <label for="oilViscositySelect">Calibre / Viscosidad <span class="required">*</span></label>
+                  <div class="input-box">
+                    <i class="fa-solid fa-gauge"></i>
+                    <select id="oilViscositySelect" name="oilViscosity" required>
+                      <option value="No estoy seguro / Asesoría en taller">No estoy seguro (Asesorarme en el taller)</option>
+                      <option value="0W-20">0W-20</option>
+                      <option value="5W-20">5W-20</option>
+                      <option value="5W-30" selected>5W-30</option>
+                      <option value="5W-40">5W-40</option>
+                      <option value="10W-30">10W-30</option>
+                      <option value="10W-40">10W-40</option>
+                      <option value="15W-40">15W-40</option>
+                      <option value="20W-50">20W-50</option>
+                      <option value="10W-50">10W-50</option>
+                      <option value="20W-40">20W-40</option>
+                      <option value="OTRO">Otro calibre...</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Custom Viscosity Input if 'OTRO' -->
+                <div class="form-group" id="customViscosityGroup" style="display: none;">
+                  <label for="customViscosity">Escribe el calibre / viscosidad <span class="required">*</span></label>
+                  <div class="input-box">
+                    <i class="fa-solid fa-pen"></i>
+                    <input type="text" id="customViscosity" name="customViscosity" placeholder="Ej. 15W-50, 75W-90...">
+                  </div>
+                </div>
+
+                <!-- Marca de Aceite -->
+                <div class="form-group">
+                  <label for="oilBrandSelect">Marca de Aceite Preferida <span class="required">*</span></label>
+                  <div class="input-box">
+                    <i class="fa-solid fa-flask"></i>
+                    <select id="oilBrandSelect" name="oilBrand" required>
+                      <option value="Cualquiera recomendada por Lubripoint">Cualquiera recomendada por Lubripoint</option>
+                      <option value="Mobil">Mobil</option>
+                      <option value="Motul">Motul</option>
+                      <option value="Castrol">Castrol</option>
+                      <option value="Shell">Shell</option>
+                      <option value="TotalEnergies">TotalEnergies</option>
+                      <option value="Valvoline">Valvoline</option>
+                      <option value="Liqui Moly">Liqui Moly</option>
+                      <option value="Chevron">Chevron</option>
+                      <option value="Terpel">Terpel</option>
+                      <option value="Yamalube">Yamalube</option>
+                      <option value="OTRO">Otra marca...</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Custom Oil Brand Input if 'OTRO' -->
+                <div class="form-group" id="customOilBrandGroup" style="display: none;">
+                  <label for="customOilBrand">Escribe la marca de aceite <span class="required">*</span></label>
+                  <div class="input-box">
+                    <i class="fa-solid fa-pen"></i>
+                    <input type="text" id="customOilBrand" name="customOilBrand" placeholder="Ej. Gulf, Repsol, Petronas...">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Observations -->
+            <div class="form-group full-width" style="margin-top: 1rem;">
+              <label for="observations">Observaciones adicionales (Opcional)</label>
+              <div class="input-box textarea-box">
+                <i class="fa-solid fa-comment-dots"></i>
+                <textarea id="observations" name="observations" rows="2" placeholder="Ej. Revisar también pastillas de freno, o avisar si el filtro de aire está sucio..."></textarea>
+              </div>
+            </div>
+
+            <div class="step-actions">
+              <button type="button" class="btn btn-secondary" onclick="goToStep(1)">
+                <i class="fa-solid fa-arrow-left"></i> Atrás
+              </button>
+              <button type="button" class="btn btn-primary" onclick="goToStep(3)">
+                Siguiente: Fecha & Hora <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+          </section>
+
+          <!-- STEP 3: FECHA & HORA (Bloques de 40 mins) -->
+          <section class="wizard-step" id="step3">
+            <div class="step-heading">
+              <h2>¿Cuándo deseas visitarnos?</h2>
+              <p>Selecciona la sede, el día y el horario de 40 minutos que mejor te convenga.</p>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group full-width">
+                <label for="branch">Sede de Atención <span class="required">*</span></label>
+                <div class="input-box">
+                  <i class="fa-solid fa-location-dot"></i>
+                  <select id="branch" name="branch" required>
+                    <option value="Sede Principal Lubripoint">Sede Principal Lubripoint</option>
+                    <option value="Sede Norte Lubripoint">Sede Express Norte</option>
+                    <option value="Sede Sur Lubripoint">Sede Express Sur</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group full-width">
+                <label for="appointmentDate">Fecha de la Cita <span class="required">*</span></label>
+                <div class="input-box">
+                  <i class="fa-solid fa-calendar-day"></i>
+                  <input type="date" id="appointmentDate" name="appointmentDate" required>
+                </div>
+                <span class="field-hint">Atención de Lunes a Sábado. Bloques de 40 minutos por turno.</span>
+              </div>
+            </div>
+
+            <!-- Time Slots Grid in 40 min increments -->
+            <div class="time-slots-container">
+              <label class="extras-title"><i class="fa-regular fa-clock"></i> Horarios disponibles (Turnos de 40 min):</label>
+              <div class="time-slots-grid" id="timeSlotsContainer">
+                <!-- Generados dinámicamente cada 40 minutos -->
+              </div>
+            </div>
+
+            <div class="step-actions">
+              <button type="button" class="btn btn-secondary" onclick="goToStep(2)">
+                <i class="fa-solid fa-arrow-left"></i> Atrás
+              </button>
+              <button type="button" class="btn btn-primary" onclick="goToStep(4)">
+                Siguiente: Datos de Contacto <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+          </section>
+
+          <!-- STEP 4: CONTACTO & CONFIRMACIÓN -->
+          <section class="wizard-step" id="step4">
+            <div class="step-heading">
+              <h2>¿A nombre de quién agendamos la cita?</h2>
+              <p>El personal del taller te recibirá con estos datos de contacto.</p>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group full-width">
+                <label for="fullName">Nombre y Apellido <span class="required">*</span></label>
+                <div class="input-box">
+                  <i class="fa-solid fa-user"></i>
+                  <input type="text" id="fullName" name="fullName" placeholder="Ej. Carlos Mendoza" required>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="phone">Teléfono / WhatsApp <span class="required">*</span></label>
+                <div class="input-box">
+                  <i class="fa-brands fa-whatsapp"></i>
+                  <input type="tel" id="phone" name="phone" placeholder="Ej. 310 123 4567" required>
+                </div>
+                <span class="field-hint">Para avisarte si tu vehículo está listo</span>
+              </div>
+
+              <div class="form-group">
+                <label for="email">Correo Electrónico <span class="optional-badge">(Opcional)</span></label>
+                <div class="input-box">
+                  <i class="fa-solid fa-envelope"></i>
+                  <input type="email" id="email" name="email" placeholder="carlos@correo.com">
+                </div>
+              </div>
+            </div>
+
+            <!-- Booking Summary Review Card -->
+            <div class="summary-card">
+              <div class="summary-header">
+                <h4><i class="fa-solid fa-receipt"></i> Resumen de tu Cita</h4>
+                <span class="summary-badge" id="summaryVehicleType">Carro</span>
+              </div>
+              <div class="summary-body">
+                <div class="summary-item">
+                  <span class="s-label">Vehículo:</span>
+                  <span class="s-val" id="summaryVehicle">-</span>
+                </div>
+                <div class="summary-item">
+                  <span class="s-label">Placa:</span>
+                  <span class="s-val highlight" id="summaryPlate">-</span>
+                </div>
+                <div class="summary-item">
+                  <span class="s-label">Servicio:</span>
+                  <span class="s-val" id="summaryService">-</span>
+                </div>
+                <div class="summary-item">
+                  <span class="s-label">Aceite Solicitado:</span>
+                  <span class="s-val highlight" id="summaryOil">-</span>
+                </div>
+                <div class="summary-item full">
+                  <span class="s-label">Cita y Sede:</span>
+                  <span class="s-val" id="summaryDateTime">-</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="step-actions">
+              <button type="button" class="btn btn-secondary" onclick="goToStep(3)">
+                <i class="fa-solid fa-arrow-left"></i> Atrás
+              </button>
+              <button type="submit" class="btn btn-success" id="btnSubmit">
+                <i class="fa-solid fa-calendar-check"></i> Confirmar Cita
+              </button>
+            </div>
+          </section>
+
+        </form>
+
+        <!-- SUCCESS SCREEN -->
+        <div class="success-screen" id="successScreen" style="display: none;">
+          <div class="success-icon-box">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+          <h2>¡Cita Agendada Exitosamente!</h2>
+          <p class="success-desc">Tu reserva ha sido registrada en el sistema de <strong>Lubripoint</strong>. Te recomendamos llegar 5 minutos antes de tu horario.</p>
+          
+          <div class="ticket-card" id="ticketDetails">
+            <!-- Filled dynamically -->
+          </div>
+
+          <div class="success-actions">
+            <a href="#" id="btnWhatsAppConfirm" target="_blank" class="btn btn-whatsapp">
+              <i class="fa-brands fa-whatsapp"></i> Avisar a WhatsApp de Lubripoint
+            </a>
+            <button type="button" class="btn btn-secondary" onclick="resetForm()">
+              <i class="fa-solid fa-rotate-right"></i> Agendar Otra Cita
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Trust Badges -->
+      <footer class="trust-footer">
+        <div class="trust-item">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span>Aceites y Filtros 100% Homologados</span>
+        </div>
+        <div class="trust-item">
+          <i class="fa-solid fa-stopwatch"></i>
+          <span>Turnos Ágiles de 40 Minutos</span>
+        </div>
+        <div class="trust-item">
+          <i class="fa-solid fa-wrench"></i>
+          <span>Asesoría Técnica en Taller</span>
+        </div>
+      </footer>
+
+    </div>
+  </main>
+
+  <!-- MODAL: PANEL DE CITAS PARA EL TALLER (ADMIN VIEW) -->
+  <div class="admin-modal-overlay" id="adminModal" style="display: none;">
+    <div class="admin-modal-card">
+      <div class="admin-modal-header">
+        <div>
+          <h3><i class="fa-solid fa-clipboard-check"></i> Panel de Citas Registradas (Taller Lubripoint)</h3>
+          <p>Lista de citas agendadas por clientes en tiempo real.</p>
+        </div>
+        <button type="button" class="btn-close-modal" onclick="toggleAdminModal()">&times;</button>
+      </div>
+      <div class="admin-modal-body">
+        <div class="table-responsive">
+          <table class="appointments-table">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Fecha/Hora</th>
+                <th>Cliente</th>
+                <th>Vehículo</th>
+                <th>Placa</th>
+                <th>Servicio & Aceite</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="appointmentsTableBody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="admin-modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="toggleAdminModal()">Cerrar</button>
+        <button type="button" class="btn btn-danger-soft" onclick="clearAllAppointments()">Limpiar Registros de Prueba</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
