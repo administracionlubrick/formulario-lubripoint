@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
   generate40MinTimeSlots();
   initFormSubmit();
   loadAppointmentsCount();
+  checkCookieConsent();
 });
 
 // 1. Populates Years dropdown (2026 to 1995 + "Anterior a 1995")
@@ -230,19 +231,19 @@ function initDateConstraints() {
   dateInput.value = minDate;
 }
 
-// Generate Time Slots strictly every 40 minutes (8:00 AM to 5:40 PM)
+// Generate Time Slots strictly every 40 minutes (9:20 AM to 6:00 PM)
 function generate40MinTimeSlots() {
   const container = document.getElementById('timeSlotsContainer');
   if (!container) return;
 
-  const slots = [];
-  // Morning block: 08:00 to 12:00
-  // 8:00, 8:40, 9:20, 10:00, 10:40, 11:20
-  // Afternoon block: 14:00 to 17:40
-  // 2:00, 2:40, 3:20, 4:00, 4:40, 5:20
+  // Turnos continuos de 40 minutos entre 9:20 AM y 6:00 PM:
+  // 09:20 AM, 10:00 AM, 10:40 AM, 11:20 AM, 12:00 PM, 12:40 PM,
+  // 01:20 PM, 02:00 PM, 02:40 PM, 03:20 PM, 04:00 PM, 04:40 PM, 05:20 PM (finaliza 6:00 PM)
   const times = [
-    "08:00 AM", "08:40 AM", "09:20 AM", "10:00 AM", "10:40 AM", "11:20 AM",
-    "02:00 PM", "02:40 PM", "03:20 PM", "04:00 PM", "04:40 PM", "05:20 PM"
+    "09:20 AM", "10:00 AM", "10:40 AM", "11:20 AM",
+    "12:00 PM", "12:40 PM", "01:20 PM", "02:00 PM",
+    "02:40 PM", "03:20 PM", "04:00 PM", "04:40 PM",
+    "05:20 PM"
   ];
 
   container.innerHTML = '';
@@ -458,6 +459,33 @@ function initFormSubmit() {
     // Save to Local Database (LocalStorage)
     saveAppointmentToStorage(appointment);
 
+    // Trigger celebratory confetti effect
+    if (typeof confetti === 'function') {
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#ff6b00', '#ff8c33', '#ffffff', '#10b981']
+      });
+    }
+
+    // Trigger sweet toast
+    if (typeof Swal === 'function') {
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        background: '#0f131a',
+        color: '#ffffff'
+      });
+      Toast.fire({
+        icon: 'success',
+        title: '¡Cita agendada con éxito!'
+      });
+    }
+
     renderSuccessScreen(appointment);
   });
 }
@@ -603,9 +631,179 @@ function renderAdminTable() {
 }
 
 function clearAllAppointments() {
-  if (confirm('¿Deseas vaciar todas las citas de prueba registradas?')) {
-    localStorage.removeItem('lubripoint_appointments');
-    renderAdminTable();
-    loadAppointmentsCount();
+  if (typeof Swal === 'function') {
+    Swal.fire({
+      title: '¿Vaciar registros de prueba?',
+      text: 'Se eliminarán todas las citas almacenadas localmente.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#30363d',
+      confirmButtonText: 'Sí, vaciar',
+      cancelButtonText: 'Cancelar',
+      background: '#0f131a',
+      color: '#ffffff'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        localStorage.removeItem('lubripoint_appointments');
+        renderAdminTable();
+        loadAppointmentsCount();
+        Swal.fire({
+          title: '¡Registros vaciados!',
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false,
+          background: '#0f131a',
+          color: '#ffffff'
+        });
+      }
+    });
+  } else {
+    if (confirm('¿Deseas vaciar todas las citas de prueba registradas?')) {
+      localStorage.removeItem('lubripoint_appointments');
+      renderAdminTable();
+      loadAppointmentsCount();
+    }
   }
 }
+
+// Add interactive Ripple animation on buttons
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.btn, .btn-admin-view');
+  if (!btn) return;
+
+  const circle = document.createElement('span');
+  const diameter = Math.max(btn.clientWidth, btn.clientHeight);
+  const radius = diameter / 2;
+
+  const rect = btn.getBoundingClientRect();
+  circle.style.width = circle.style.height = `${diameter}px`;
+  circle.style.left = `${e.clientX - rect.left - radius}px`;
+  circle.style.top = `${e.clientY - rect.top - radius}px`;
+  circle.classList.add('ripple');
+
+  const existingRipple = btn.querySelector('.ripple');
+  if (existingRipple) {
+    existingRipple.remove();
+  }
+
+  btn.appendChild(circle);
+  setTimeout(() => circle.remove(), 600);
+});
+
+// ========================================================
+// LEGAL COMPLIANCE: COOKIE BANNER & HABEAS DATA MODALS
+// ========================================================
+function checkCookieConsent() {
+  const consent = localStorage.getItem('lubripoint_cookies_accepted');
+  const banner = document.getElementById('cookieBanner');
+  if (!consent && banner) {
+    setTimeout(() => {
+      banner.style.display = 'block';
+    }, 600);
+  }
+}
+
+function acceptCookies() {
+  localStorage.setItem('lubripoint_cookies_accepted', 'true');
+  const banner = document.getElementById('cookieBanner');
+  if (banner) {
+    banner.style.display = 'none';
+  }
+}
+
+const LEGAL_DOCS = {
+  privacy: {
+    title: '<i class="fa-solid fa-user-shield"></i> Política de Privacidad & Tratamiento de Datos Personales',
+    subtitle: 'Cumplimiento con la Ley 1581 de 2012 y Decreto 1377 de 2013 (Habeas Data)',
+    content: `
+      <h4>1. Responsable del Tratamiento</h4>
+      <p><strong>LUBRIPOINT S.A.S.</strong>, establecimiento de comercio dedicado a servicios de mantenimiento y lubricación automotriz, garantiza la reserva y confidencialidad de la información suministrada por sus clientes.</p>
+      
+      <h4>2. Finalidad de la Recolección de Datos</h4>
+      <p>Los datos solicitados en este formulario (Nombre, Teléfono, Correo, Datos del Vehículo y Placa) son recolectados con las siguientes finalidades legítimas:</p>
+      <ul>
+        <li><strong>Gestión de Turnos y Citas:</strong> Reservar la bahía de servicio y alistar el lubricante y filtros correspondientes.</li>
+        <li><strong>Contacto Operativo:</strong> Notificar el estado de la cita, avisar cuando el vehículo esté listo o gestionar imprevistos en taller.</li>
+        <li><strong>Historial Técnico:</strong> Registrar el historial de lubricación para recomendar la viscosidad y frecuencia idónea según fabricante.</li>
+        <li><strong>Comunicaciones Comerciales (Opcional):</strong> Remitir avisos preventivos de próximo kilometraje y ofertas exclusivas, únicamente cuando el usuario lo autorice.</li>
+      </ul>
+
+      <div class="legal-highlight-box">
+        <strong>Compromiso de No Cesión:</strong> Lubripoint <u>nunca</u> vende, comercializa ni transfiere tus datos personales a empresas de terceros ni plataformas publicitarias ajenas.
+      </div>
+
+      <h4>3. Derechos del Titular (Habeas Data)</h4>
+      <p>De acuerdo con la legislación vigente, todo usuario tiene derecho a:</p>
+      <ul>
+        <li>Conocer, actualizar y rectificar sus datos personales.</li>
+        <li>Solicitar prueba de la autorización otorgada.</li>
+        <li>Ser informado sobre el uso que se le ha dado a sus datos.</li>
+        <li>Revocar la autorización o solicitar la supresión de sus datos de nuestras bases cuando no exista un deber legal de permanencia.</li>
+      </ul>
+      <p>Para ejercer estos derechos, el titular puede contactar directamente a la administración de Lubripoint a través de WhatsApp o en cualquiera de nuestras sedes.</p>
+    `
+  },
+  terms: {
+    title: '<i class="fa-solid fa-file-contract"></i> Términos y Condiciones del Servicio',
+    subtitle: 'Condiciones generales de agendamiento y atención en taller',
+    content: `
+      <h4>1. Naturaleza de la Cita</h4>
+      <p>El agendamiento web reserva un turno de atención preferencial en la bahía de servicio de Lubripoint durante el bloque horario seleccionado (40 minutos promedio).</p>
+
+      <h4>2. Tiempo de Espera y Tolerancia</h4>
+      <p>Agradecemos presentarse <strong>5 a 10 minutos antes</strong> de la hora acordada. En caso de retrasos superiores a 15 minutos, el taller podrá reasignar el turno al orden de llegada para no afectar la agenda de los demás clientes.</p>
+
+      <h4>3. Diagnóstico y Repuestos</h4>
+      <ul>
+        <li>Los aceites y filtros suministrados por Lubripoint cumplen con estándares de calidad API, ACEA e ILSAC certificados por fabricantes.</li>
+        <li>Si durante la inspección técnica se detecta alguna fuga preexistente, desgaste severo o anomalía ajena al servicio contratado, el técnico informará al cliente antes de proceder.</li>
+      </ul>
+
+      <div class="legal-highlight-box">
+        <strong>Inspección de Seguridad:</strong> Lubripoint no se hace responsable por objetos de alto valor dejados dentro del habitáculo del vehículo no declarados al momento del ingreso.
+      </div>
+    `
+  },
+  cookies: {
+    title: '<i class="fa-solid fa-cookie-bite"></i> Política de Cookies & Almacenamiento Local',
+    subtitle: 'Transparencia sobre el uso de tecnologías de almacenamiento en tu dispositivo',
+    content: `
+      <h4>1. ¿Qué información almacenamos?</h4>
+      <p>Este sitio web <strong>no utiliza cookies invasivas de rastreo de terceros</strong> para perfilamiento publicitario masivo ni venta de datos.</p>
+      
+      <h4>2. Almacenamiento Técnico Esencial (LocalStorage)</h4>
+      <p>Hacemos uso de tecnologías de almacenamiento seguro del navegador (LocalStorage) para:</p>
+      <ul>
+        <li><strong>Persistencia de la Reserva:</strong> Recordar temporalmente los datos del vehículo y fecha mientras completas los 4 pasos del formulario.</li>
+        <li><strong>Registro de Cita:</strong> Almacenar el comprobante de cita en tu dispositivo para que puedas consultarlo al llegar al taller.</li>
+        <li><strong>Preferencia de Consentimiento:</strong> Guardar tu confirmación de lectura de este aviso para no mostrártelo repetidamente.</li>
+      </ul>
+
+      <div class="legal-highlight-box">
+        Puedes borrar o deshabilitar estas cookies o datos de sesión en cualquier momento desde la configuración de privacidad de tu navegador.
+      </div>
+    `
+  }
+};
+
+function openLegalModal(docType) {
+  const doc = LEGAL_DOCS[docType] || LEGAL_DOCS.privacy;
+  const modal = document.getElementById('legalModal');
+  const title = document.getElementById('legalModalTitle');
+  const subtitle = document.getElementById('legalModalSubtitle');
+  const body = document.getElementById('legalModalBody');
+
+  if (modal && title && body) {
+    title.innerHTML = doc.title;
+    if (subtitle) subtitle.textContent = doc.subtitle;
+    body.innerHTML = doc.content;
+    modal.style.display = 'flex';
+  }
+}
+
+function closeLegalModal() {
+  const modal = document.getElementById('legalModal');
+  if (modal) modal.style.display = 'none';
+}
+
