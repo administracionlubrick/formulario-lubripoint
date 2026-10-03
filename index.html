@@ -108,17 +108,15 @@
             </div>
 
             <!-- Vehicle Type Selector -->
-            <div class="type-selector-grid">
+            <div class="type-selector-grid has-three-types">
               <label class="type-card selected" for="typeCar">
                 <input type="radio" id="typeCar" name="vehicleType" value="Carro" checked>
                 <div class="card-icon">
-                  <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H8.5a1 1 0 0 0-.8.4L5 11l-5.16.86a1 1 0 0 0-.84.99V16h3m14 0a2.5 2.5 0 1 1-5 0m5 0a2.5 2.5 0 1 0-5 0M7 16a2.5 2.5 0 1 1-5 0m5 0a2.5 2.5 0 1 0-5 0"/>
-                  </svg>
+                  <i class="fa-solid fa-car-side"></i>
                 </div>
                 <div class="card-text">
-                  <h3>Carro / Camioneta</h3>
-                  <span>Automóvil, Campero, SUV</span>
+                  <h3>Carro / SUV</h3>
+                  <span>Automóvil, Campero, Sedán</span>
                 </div>
                 <div class="card-radio-check"><i class="fa-solid fa-check"></i></div>
               </label>
@@ -126,16 +124,34 @@
               <label class="type-card" for="typeMoto">
                 <input type="radio" id="typeMoto" name="vehicleType" value="Moto">
                 <div class="card-icon">
-                  <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="5" cy="16" r="3"/>
-                    <circle cx="19" cy="16" r="3"/>
-                    <path d="M12 17h4l2.5-5.5a1 1 0 0 0-.9-1.5H14l-2 3H8l-3 4"/>
-                    <path d="m14 10 2-4h3"/>
+                  <i class="fa-solid fa-motorcycle"></i>
+                </div>
+                <div class="card-text">
+                  <h3>Moto</h3>
+                  <span>Scooter, Sport, Urbana</span>
+                </div>
+                <div class="card-radio-check"><i class="fa-solid fa-check"></i></div>
+              </label>
+
+              <label class="type-card" for="typeTruck">
+                <input type="radio" id="typeTruck" name="vehicleType" value="Camión">
+                <div class="card-icon">
+                  <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <!-- Camión / Furgón Comercial -->
+                    <rect x="2" y="5" width="12" height="10" rx="1.5"/>
+                    <path d="M14 8.5H18.5L21.5 12V15H14V8.5Z"/>
+                    <line x1="2" y1="15" x2="22" y2="15"/>
+                    <circle cx="6.5" cy="17.5" r="2.3"/>
+                    <circle cx="18" cy="17.5" r="2.3"/>
+                    <circle cx="6.5" cy="17.5" r="1" fill="currentColor"/>
+                    <circle cx="18" cy="17.5" r="1" fill="currentColor"/>
+                    <line x1="14" y1="11.5" x2="19" y2="11.5"/>
+                    <line x1="6" y1="8" x2="10" y2="8"/>
                   </svg>
                 </div>
                 <div class="card-text">
-                  <h3>Motocicleta</h3>
-                  <span>Scooter, Sport, Urbana, Enduro</span>
+                  <h3>Camión / Furgón</h3>
+                  <span>Comercial, NHR, Turbo, Van</span>
                 </div>
                 <div class="card-radio-check"><i class="fa-solid fa-check"></i></div>
               </label>
@@ -392,10 +408,25 @@
                 <div class="input-box">
                   <i class="fa-solid fa-location-dot"></i>
                   <select id="branch" name="branch" required>
-                    <option value="Sede Principal Lubripoint">Sede Principal Lubripoint</option>
-                    <option value="Sede Norte Lubripoint">Sede Express Norte</option>
-                    <option value="Sede Sur Lubripoint">Sede Express Sur</option>
+                    <option value="Lubripoint - Sede Pasto (Calle 12, Av. Julian Buchelly #13A-27)">Lubripoint - Pasto (Av. Julian Buchelly #13A-27)</option>
                   </select>
+                </div>
+              </div>
+
+              <!-- Location Info Card with Google Maps Button -->
+              <div class="form-group full-width">
+                <div class="branch-location-card">
+                  <div class="branch-loc-icon">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                  </div>
+                  <div class="branch-loc-details">
+                    <h4>Lubripoint Pasto</h4>
+                    <p><i class="fa-solid fa-route"></i> CALLE 12, Av. Julian Buchelly #13A-27, Pasto, Nariño</p>
+                    <span class="branch-loc-status"><i class="fa-solid fa-circle-check"></i> Bahías de atención equipadas para Carro, Moto y Camión</span>
+                  </div>
+                  <a href="https://maps.app.goo.gl/ypkYgjWg75LJp1ha8" target="_blank" rel="noopener noreferrer" class="btn-maps-link">
+                    <i class="fa-brands fa-google"></i> Ver en Maps <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                  </a>
                 </div>
               </div>
 
@@ -534,6 +565,9 @@
           <div class="success-actions">
             <a href="#" id="btnWhatsAppConfirm" target="_blank" class="btn btn-whatsapp">
               <i class="fa-brands fa-whatsapp"></i> Avisar a WhatsApp de Lubripoint
+            </a>
+            <a href="https://maps.app.goo.gl/ypkYgjWg75LJp1ha8" target="_blank" rel="noopener noreferrer" class="btn btn-maps">
+              <i class="fa-solid fa-diamond-turn-right"></i> Cómo Llegar (Google Maps)
             </a>
             <button type="button" class="btn btn-secondary" onclick="resetForm()">
               <i class="fa-solid fa-rotate-right"></i> Agendar Otra Cita

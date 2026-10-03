@@ -29,6 +29,20 @@ const VEHICLE_DATA = {
     Kymco: ["Agility 125 / RS / Naked", "Twist 125", "Downtown 300", "Otro"],
     BMW: ["G 310 R / GS", "F 750 / 850 GS", "R 1250 GS", "Otro"],
     Otro: ["Otro modelo"]
+  },
+  Camión: {
+    Chevrolet: ["NHR", "NKR", "NPR", "FRR", "FVR", "D-Max Chasis", "Carry / Van", "Otro"],
+    Hino: ["Dutro 300 Serie", "Hino 500", "FC9J", "Hino Bus / Chasis", "Otro"],
+    Foton: ["Aumark (Turbo)", "Ollin", "Auman", "Mini Truck / Van", "Otro"],
+    JAC: ["HFC 1035 / 1040", "JAC Urban", "Sunray Van", "JAC Turbo", "Otro"],
+    Isuzu: ["Reward Serie N", "Forward Serie F", "Otro"],
+    Mitsubishi_Fuso: ["Canter 4.5", "Canter 7.5", "FJ", "Otro"],
+    Renault: ["Master Van", "Trafic", "Kangoo Express", "Dokker", "Otro"],
+    MercedesBenz: ["Sprinter 311 / 415 / 515", "Atego", "Accelo", "Otro"],
+    DFSK: ["C35 Van", "K05 / K07", "C31 / C32 Pick-up", "Otro"],
+    Kia: ["K2700 / K2500 (Bongo)", "Pregio", "Otro"],
+    Hyundai: ["HD65 / HD72 / HD78", "H100 Porter", "H1 Van", "Otro"],
+    Otro: ["Otro modelo"]
   }
 };
 
