@@ -19,7 +19,7 @@ window.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXB
 // Clave simple para abrir el Panel de Citas del taller.
 // Cámbiala por la que quieras. (No es seguridad fuerte, solo evita
 // que un cliente curioso abra el panel o borre registros.)
-window.ADMIN_PASSCODE = "lubri2026";
+window.ADMIN_PASSCODE = "Lubri2026*";
 
 // ============================================================
 //  AVISO AUTOMÁTICO AL TALLER POR WHATSAPP (CallMeBot)
