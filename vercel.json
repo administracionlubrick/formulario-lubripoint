@@ -1,7 +1,6 @@
 {
-  "version": 2,
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/acceso-citas-taller", "destination": "/index.html" }
+    { "source": "/acceso-citas-taller", "destination": "/" }
   ]
 }
