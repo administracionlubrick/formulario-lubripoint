@@ -13,8 +13,8 @@
 // SOLO en modo local (localStorage) como respaldo, sin enviar al taller.
 // ============================================================
 
-window.SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
-window.SUPABASE_ANON_KEY = "TU_ANON_KEY";
+window.SUPABASE_URL = "https://ijwqdywavtzsixkmassq.supabase.co";
+window.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlqd3FkeXdhdnR6c2l4a21hc3NxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4MzUyNTgsImV4cCI6MjEwNTQxMTI1OH0.Pe1658kHTDsw5Sv20Pk8huyatVqefHAEkzjrdUpDu7M";
 
 // Clave simple para abrir el Panel de Citas del taller.
 // Cámbiala por la que quieras. (No es seguridad fuerte, solo evita
