@@ -49,31 +49,31 @@ const VEHICLE_DATA = {
 let currentStep = 1;
 
 // ========================================================
-// FIREBASE (persistencia real de citas + disponibilidad)
+// SUPABASE (persistencia real de citas + disponibilidad)
 // ========================================================
-let db = null;
-let firebaseReady = false;
+let supa = null;
+let supabaseReady = false;
 
-function initFirebase() {
+function initSupabase() {
   try {
-    const cfg = window.FIREBASE_CONFIG;
-    const configured = cfg && cfg.apiKey && !String(cfg.apiKey).startsWith('TU_');
-    if (!configured || typeof firebase === 'undefined') {
-      console.warn('[Lubripoint] Firebase no configurado. Usando solo almacenamiento local (las citas NO llegan al taller).');
+    const url = window.SUPABASE_URL;
+    const key = window.SUPABASE_ANON_KEY;
+    const configured = url && key && !url.includes('TU_') && !String(key).startsWith('TU_');
+    if (!configured || typeof window.supabase === 'undefined' || !window.supabase.createClient) {
+      console.warn('[Lubripoint] Supabase no configurado. Usando solo almacenamiento local (las citas NO llegan al taller).');
       return;
     }
-    firebase.initializeApp(cfg);
-    db = firebase.firestore();
-    firebaseReady = true;
-    console.log('[Lubripoint] Firebase conectado. Las citas se guardarán en la nube.');
+    supa = window.supabase.createClient(url, key);
+    supabaseReady = true;
+    console.log('[Lubripoint] Supabase conectado. Las citas se guardarán en la nube.');
   } catch (err) {
-    console.error('[Lubripoint] Error inicializando Firebase:', err);
-    firebaseReady = false;
+    console.error('[Lubripoint] Error inicializando Supabase:', err);
+    supabaseReady = false;
   }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  initFirebase();
+  initSupabase();
   initVehicleTypeSelection();
   populateYears();
   populateBrands();
@@ -361,7 +361,7 @@ async function refreshSlotAvailability() {
   const branchInput = document.getElementById('branch');
   if (!container || !dateInput || !dateInput.value) return;
 
-  if (!firebaseReady || !db) return; // sin Firebase no hay disponibilidad compartida
+  if (!supabaseReady || !supa) return; // sin Supabase no hay disponibilidad compartida
 
   const date = dateInput.value;
   const branch = branchInput ? branchInput.value : '';
@@ -373,14 +373,14 @@ async function refreshSlotAvailability() {
   container.appendChild(loading);
 
   try {
-    let query = db.collection('appointments').where('date', '==', date);
-    if (branch) query = query.where('branch', '==', branch);
-    const snap = await query.get();
+    let query = supa.from('appointments').select('appt_time').eq('appt_date', date);
+    if (branch) query = query.eq('branch', branch);
+    const { data, error } = await query;
+    if (error) throw error;
 
     const taken = new Set();
-    snap.forEach(doc => {
-      const data = doc.data();
-      if (data && data.time) taken.add(data.time);
+    (data || []).forEach(row => {
+      if (row && row.appt_time) taken.add(row.appt_time);
     });
 
     applyTakenSlots(taken);
@@ -671,8 +671,8 @@ function initFormSubmit() {
       return;
     }
 
-    // Guardar en la nube (Firestore) con validación de disponibilidad.
-    // Si Firebase no está configurado, cae a almacenamiento local.
+    // Guardar en la nube (Supabase) con validación de disponibilidad.
+    // Si Supabase no está configurado, cae a almacenamiento local.
     const btnSubmit = document.getElementById('btnSubmit');
     const originalBtnHtml = btnSubmit ? btnSubmit.innerHTML : '';
     if (btnSubmit) {
@@ -728,29 +728,27 @@ function initFormSubmit() {
   });
 }
 
-// Genera un ID determinístico por turno para impedir doble reserva
-function slotDocId(appt) {
-  const raw = `${appt.branch}__${appt.date}__${appt.time}`;
-  return raw.replace(/[^a-zA-Z0-9]+/g, '_').slice(0, 480);
-}
-
-// Guarda la cita en Firestore de forma atómica.
-// Devuelve 'ok', 'slot-taken' (turno ya ocupado), o 'local' (sin Firebase).
+// Guarda la cita en Supabase. La restricción UNIQUE(branch, appt_date, appt_time)
+// de la tabla garantiza que no se dupliquen turnos (error 23505 = conflicto).
+// Devuelve 'ok', 'slot-taken' (turno ya ocupado), o 'local' (sin Supabase).
 async function saveAppointmentToCloud(appointment) {
-  if (!firebaseReady || !db) return 'local';
+  if (!supabaseReady || !supa) return 'local';
 
-  const ref = db.collection('appointments').doc(slotDocId(appointment));
+  const row = {
+    branch: appointment.branch,
+    appt_date: appointment.date,
+    appt_time: appointment.time,
+    data: appointment
+  };
+
   try {
-    await db.runTransaction(async (tx) => {
-      const existing = await tx.get(ref);
-      if (existing.exists) {
-        throw new Error('SLOT_TAKEN');
-      }
-      tx.set(ref, appointment);
-    });
+    const { error } = await supa.from('appointments').insert(row);
+    if (error) {
+      if (error.code === '23505') return 'slot-taken';
+      throw error;
+    }
     return 'ok';
   } catch (err) {
-    if (err && err.message === 'SLOT_TAKEN') return 'slot-taken';
     console.error('[Lubripoint] Error guardando en la nube:', err);
     // No bloqueamos al cliente: queda el respaldo en localStorage.
     return 'local';
@@ -921,7 +919,7 @@ async function renderAdminTable() {
   const tbody = document.getElementById('appointmentsTableBody');
   let list = [];
 
-  if (firebaseReady && db) {
+  if (supabaseReady && supa) {
     tbody.innerHTML = `
       <tr><td colspan="7">
         <div class="empty-table-msg">
@@ -930,8 +928,12 @@ async function renderAdminTable() {
         </div>
       </td></tr>`;
     try {
-      const snap = await db.collection('appointments').orderBy('createdAt', 'desc').get();
-      snap.forEach(doc => list.push(doc.data()));
+      const { data, error } = await supa
+        .from('appointments')
+        .select('data')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      list = (data || []).map(row => row.data).filter(Boolean);
     } catch (err) {
       console.error('[Lubripoint] Error leyendo citas de la nube:', err);
       list = JSON.parse(localStorage.getItem('lubripoint_appointments') || '[]');
@@ -975,7 +977,7 @@ function clearAllAppointments() {
   if (typeof Swal === 'function') {
     Swal.fire({
       title: '¿Vaciar registros locales?',
-      text: firebaseReady
+      text: supabaseReady
         ? 'Se borra solo el respaldo de ESTE navegador. Las citas en la nube NO se eliminan.'
         : 'Se eliminarán todas las citas almacenadas localmente.',
       icon: 'warning',
