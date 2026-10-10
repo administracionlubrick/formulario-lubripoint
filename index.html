@@ -642,40 +642,63 @@
     </div>
   </div>
 
-  <!-- MODAL: PANEL DE CITAS PARA EL TALLER (ADMIN VIEW) -->
-  <div class="admin-modal-overlay" id="adminModal" style="display: none;">
-    <div class="admin-modal-card">
-      <div class="admin-modal-header">
-        <div>
-          <h3><i class="fa-solid fa-clipboard-check"></i> Panel de Citas Registradas (Taller Lubripoint)</h3>
-          <p>Lista de citas agendadas por clientes en tiempo real.</p>
-        </div>
-        <button type="button" class="btn-close-modal" onclick="toggleAdminModal()">&times;</button>
-      </div>
-      <div class="admin-modal-body">
-        <div class="table-responsive">
-          <table class="appointments-table">
-            <thead>
-              <tr>
-                <th>Código</th>
-                <th>Fecha/Hora</th>
-                <th>Cliente</th>
-                <th>Vehículo</th>
-                <th>Placa</th>
-                <th>Servicio & Aceite</th>
-                <th>Acción</th>
-              </tr>
-            </thead>
-            <tbody id="appointmentsTableBody">
-              <!-- Rendered via JS -->
-            </tbody>
-          </table>
+  <!-- PANEL DE ADMINISTRACIÓN DEL TALLER (DASHBOARD A PANTALLA COMPLETA) -->
+  <div class="admin-dashboard" id="adminModal" style="display: none;">
+    <!-- Barra superior -->
+    <header class="dash-topbar">
+      <div class="dash-brand">
+        <div class="dash-logo"><i class="fa-solid fa-oil-can"></i></div>
+        <div class="dash-brand-text">
+          <h1>Panel del Taller</h1>
+          <span>Lubripoint · Gestión de Citas</span>
         </div>
       </div>
-      <div class="admin-modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="toggleAdminModal()">Cerrar</button>
-        <button type="button" class="btn btn-danger-soft" onclick="clearAllAppointments()">Limpiar Registros de Prueba</button>
+      <div class="dash-topbar-actions">
+        <button type="button" class="dash-btn dash-btn-ghost" onclick="renderAdminTable()" title="Actualizar">
+          <i class="fa-solid fa-rotate"></i> <span class="dash-btn-label">Actualizar</span>
+        </button>
+        <button type="button" class="dash-btn dash-btn-exit" onclick="closeAdminPanel()" title="Salir">
+          <i class="fa-solid fa-right-from-bracket"></i> <span class="dash-btn-label">Salir</span>
+        </button>
       </div>
+    </header>
+
+    <div class="dash-scroll">
+      <!-- Tarjetas de estadísticas -->
+      <section class="dash-stats" id="dashStats">
+        <!-- Rendered via JS -->
+      </section>
+
+      <!-- Barra de herramientas: filtro de fecha y búsqueda -->
+      <section class="dash-toolbar">
+        <div class="dash-filter-group">
+          <label><i class="fa-regular fa-calendar"></i> Filtrar por día</label>
+          <div class="dash-chips" id="dashDateChips">
+            <button type="button" class="dash-chip active" data-filter="today">Hoy</button>
+            <button type="button" class="dash-chip" data-filter="upcoming">Próximas</button>
+            <button type="button" class="dash-chip" data-filter="all">Todas</button>
+          </div>
+        </div>
+        <div class="dash-search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="dashSearch" placeholder="Buscar por cliente, placa, teléfono o código...">
+        </div>
+      </section>
+
+      <!-- Listado de citas (tarjetas detalladas) -->
+      <section class="dash-list" id="appointmentsList">
+        <!-- Rendered via JS -->
+      </section>
+
+      <!-- Tabla oculta de respaldo (compatibilidad) -->
+      <tbody id="appointmentsTableBody" style="display:none;"></tbody>
+
+      <footer class="dash-footer">
+        <span><i class="fa-solid fa-lock"></i> Acceso restringido · Datos protegidos (Ley 1581 de 2012)</span>
+        <button type="button" class="dash-btn dash-btn-danger" onclick="clearAllAppointments()">
+          <i class="fa-solid fa-trash-can"></i> Limpiar respaldo local
+        </button>
+      </footer>
     </div>
   </div>
 

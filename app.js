@@ -929,22 +929,45 @@ function toggleAdminModal() {
   }
 }
 
-async function renderAdminTable() {
-  const tbody = document.getElementById('appointmentsTableBody');
-  let list = [];
+// Estado del dashboard
+let adminAppointments = [];
+let dashFilter = 'today';
+let dashSearch = '';
+let dashListenersReady = false;
 
+function closeAdminPanel() {
+  const modal = document.getElementById('adminModal');
+  if (modal) modal.style.display = 'none';
+  // Si entramos por la ruta /acceso-citas-taller, volvemos al inicio
+  if ((window.location.pathname || '').toLowerCase().includes('acceso-citas-taller')) {
+    history.replaceState(null, '', '/');
+  }
+}
+
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// Carga las citas (nube o local) y pinta el dashboard
+async function renderAdminTable() {
+  const listEl = document.getElementById('appointmentsList');
+  if (listEl) {
+    listEl.innerHTML = `<div class="dash-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando citas...</div>`;
+  }
+
+  let list = [];
   if (supabaseReady && supa) {
-    tbody.innerHTML = `
-      <tr><td colspan="7">
-        <div class="empty-table-msg">
-          <i class="fa-solid fa-spinner fa-spin"></i>
-          <p>Cargando citas desde la nube...</p>
-        </div>
-      </td></tr>`;
     try {
       const { data, error } = await supa
         .from('appointments')
-        .select('data')
+        .select('data, created_at')
         .order('created_at', { ascending: false });
       if (error) throw error;
       list = (data || []).map(row => row.data).filter(Boolean);
@@ -956,35 +979,144 @@ async function renderAdminTable() {
     list = JSON.parse(localStorage.getItem('lubripoint_appointments') || '[]');
   }
 
+  adminAppointments = list;
+  bindDashControls();
+  renderDashStats();
+  renderDashList();
+}
+
+function renderDashStats() {
+  const el = document.getElementById('dashStats');
+  if (!el) return;
+  const all = adminAppointments;
+  const today = todayStr();
+  const count = (fn) => all.filter(fn).length;
+
+  const stats = [
+    { ico: 'ico-total',  icon: 'fa-calendar-check', num: all.length, lbl: 'Citas totales' },
+    { ico: 'ico-today',  icon: 'fa-clock', num: count(a => a.date === today), lbl: 'Para hoy' },
+    { ico: 'ico-car',    icon: 'fa-car-side', num: count(a => a.vehicleType === 'Carro'), lbl: 'Carros' },
+    { ico: 'ico-moto',   icon: 'fa-motorcycle', num: count(a => a.vehicleType === 'Moto'), lbl: 'Motos' },
+    { ico: 'ico-truck',  icon: 'fa-truck', num: count(a => a.vehicleType === 'Camión'), lbl: 'Camiones' }
+  ];
+
+  el.innerHTML = stats.map(s => `
+    <div class="stat-card">
+      <div class="stat-ico ${s.ico}"><i class="fa-solid ${s.icon}"></i></div>
+      <div>
+        <div class="stat-num">${s.num}</div>
+        <div class="stat-lbl">${s.lbl}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filteredAppointments() {
+  const today = todayStr();
+  let list = adminAppointments.slice();
+
+  if (dashFilter === 'today') {
+    list = list.filter(a => a.date === today);
+  } else if (dashFilter === 'upcoming') {
+    list = list.filter(a => a.date >= today);
+  }
+
+  if (dashSearch) {
+    const q = dashSearch.toLowerCase();
+    list = list.filter(a =>
+      [a.client, a.phone, a.plate, a.id, a.brand, a.model]
+        .some(v => String(v || '').toLowerCase().includes(q))
+    );
+  }
+
+  // Ordenar por fecha y hora de la cita (más próxima primero)
+  list.sort((a, b) => (a.date + ' ' + (a.time || '')).localeCompare(b.date + ' ' + (b.time || '')));
+  return list;
+}
+
+function vehicleBadge(type) {
+  if (type === 'Moto')   return { cls: 'badge-moto',  icon: 'fa-motorcycle', label: 'Moto' };
+  if (type === 'Camión') return { cls: 'badge-truck', icon: 'fa-truck',      label: 'Camión' };
+  return { cls: 'badge-car', icon: 'fa-car-side', label: 'Carro' };
+}
+
+function renderDashList() {
+  const el = document.getElementById('appointmentsList');
+  if (!el) return;
+  const list = filteredAppointments();
+
   if (list.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="7">
-          <div class="empty-table-msg">
-            <i class="fa-solid fa-calendar-xmark"></i>
-            <p>No hay citas agendadas todavía.</p>
-          </div>
-        </td>
-      </tr>
-    `;
+    el.innerHTML = `
+      <div class="dash-empty">
+        <i class="fa-solid fa-calendar-xmark"></i>
+        <p>No hay citas que coincidan con el filtro seleccionado.</p>
+      </div>`;
     return;
   }
 
-  tbody.innerHTML = list.map(item => `
-    <tr>
-      <td><strong style="color: var(--primary);">#${item.id}</strong></td>
-      <td><strong>${item.date}</strong><br><small style="color: var(--accent-success);">${item.time}</small></td>
-      <td><strong>${item.client}</strong><br><small>${item.phone}</small></td>
-      <td>${item.vehicleType} ${item.brand} ${item.model} (${item.year})</td>
-      <td><span style="background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px; font-weight:700;">${item.plate}</span></td>
-      <td>${item.service}<br><small style="color: #38bdf8;">${item.oilViscosity} - ${item.oilBrand}</small></td>
-      <td>
-        <a href="https://api.whatsapp.com/send?phone=${encodeURIComponent(item.phone)}&text=Hola%20${encodeURIComponent(item.client)},%20te%20escribimos%20de%20Lubripoint%20para%20confirmar%20tu%20cita%20del%20${encodeURIComponent(item.date)}%20a%20las%20${encodeURIComponent(item.time)}" target="_blank" class="btn btn-whatsapp" style="padding: 0.35rem 0.65rem; font-size: 0.76rem;">
-          <i class="fa-brands fa-whatsapp"></i> Chat
-        </a>
-      </td>
-    </tr>
-  `).join('');
+  el.innerHTML = list.map(a => {
+    const b = vehicleBadge(a.vehicleType);
+    const waText = `Hola ${a.client}, te escribimos de Lubripoint para confirmar tu cita (${a.id}) del ${a.date} a las ${a.time}.`;
+    const waHref = `https://api.whatsapp.com/send?phone=${encodeURIComponent((a.phone||'').replace(/\D/g,''))}&text=${encodeURIComponent(waText)}`;
+    const hasNote = a.observations && a.observations !== 'Ninguna';
+    const hasEmail = a.email && a.email !== 'No suministrado';
+
+    return `
+    <article class="appt-card">
+      <div class="appt-card-head">
+        <span class="appt-code"># ${escapeHtml(a.id)}</span>
+        <span class="appt-type-badge ${b.cls}"><i class="fa-solid ${b.icon}"></i> ${b.label}</span>
+      </div>
+      <div class="appt-when">
+        <i class="fa-regular fa-clock" style="color:var(--accent-success)"></i>
+        <div>
+          <div class="when-time">${escapeHtml(a.time)}</div>
+          <div class="when-date">${escapeHtml(a.date)}</div>
+        </div>
+      </div>
+      <div class="appt-body">
+        <div class="appt-row"><span class="r-ico"><i class="fa-solid fa-user"></i></span><span class="r-lbl">Cliente:</span><span class="r-val">${escapeHtml(a.client)}</span></div>
+        <div class="appt-row"><span class="r-ico"><i class="fa-brands fa-whatsapp"></i></span><span class="r-lbl">Tel:</span><span class="r-val hl">${escapeHtml(a.phone)}</span></div>
+        ${hasEmail ? `<div class="appt-row"><span class="r-ico"><i class="fa-solid fa-envelope"></i></span><span class="r-lbl">Correo:</span><span class="r-val">${escapeHtml(a.email)}</span></div>` : ''}
+        <div class="appt-row"><span class="r-ico"><i class="fa-solid fa-car-rear"></i></span><span class="r-lbl">Vehículo:</span><span class="r-val">${escapeHtml(a.brand)} ${escapeHtml(a.model)} (${escapeHtml(a.year)})</span></div>
+        <div class="appt-row"><span class="r-ico"><i class="fa-solid fa-id-card"></i></span><span class="r-lbl">Placa:</span><span class="r-val"><span class="appt-plate">${escapeHtml(a.plate)}</span></span></div>
+        <div class="appt-row"><span class="r-ico"><i class="fa-solid fa-gauge-high"></i></span><span class="r-lbl">Km:</span><span class="r-val">${escapeHtml(a.mileage)}</span></div>
+        <div class="appt-row"><span class="r-ico"><i class="fa-solid fa-screwdriver-wrench"></i></span><span class="r-lbl">Servicio:</span><span class="r-val">${escapeHtml(a.service)}</span></div>
+        <div class="appt-row"><span class="r-ico"><i class="fa-solid fa-droplet"></i></span><span class="r-lbl">Aceite:</span><span class="r-val oil">${escapeHtml(a.oilViscosity)} · ${escapeHtml(a.oilBrand)}</span></div>
+        <div class="appt-row"><span class="r-ico"><i class="fa-solid fa-location-dot"></i></span><span class="r-lbl">Sede:</span><span class="r-val">${escapeHtml(a.branch)}</span></div>
+        ${hasNote ? `<div class="appt-note"><i class="fa-solid fa-comment-dots"></i> ${escapeHtml(a.observations)}</div>` : ''}
+        ${a.marketingConsent ? `<span class="appt-mkt"><i class="fa-solid fa-bell"></i> Autoriza recordatorios y promociones</span>` : ''}
+      </div>
+      <div class="appt-card-foot">
+        <a class="btn-wa" href="${waHref}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> Escribir al cliente</a>
+      </div>
+    </article>`;
+  }).join('');
+}
+
+function bindDashControls() {
+  if (dashListenersReady) return;
+  dashListenersReady = true;
+
+  const chips = document.getElementById('dashDateChips');
+  if (chips) {
+    chips.addEventListener('click', (e) => {
+      const btn = e.target.closest('.dash-chip');
+      if (!btn) return;
+      chips.querySelectorAll('.dash-chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      dashFilter = btn.dataset.filter;
+      renderDashList();
+    });
+  }
+
+  const search = document.getElementById('dashSearch');
+  if (search) {
+    search.addEventListener('input', () => {
+      dashSearch = search.value.trim();
+      renderDashList();
+    });
+  }
 }
 
 function clearAllAppointments() {
