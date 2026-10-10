@@ -20,3 +20,12 @@ window.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXB
 // Cámbiala por la que quieras. (No es seguridad fuerte, solo evita
 // que un cliente curioso abra el panel o borre registros.)
 window.ADMIN_PASSCODE = "lubri2026";
+
+// ============================================================
+//  AVISO AUTOMÁTICO AL TALLER POR WHATSAPP (CallMeBot)
+// ============================================================
+// Número del taller con indicativo de país, SIN "+" ni espacios
+// (Colombia = 57). Y la APIKEY que te dio CallMeBot.
+// Si dejas el número vacío, el aviso automático queda desactivado.
+window.CALLMEBOT_PHONE = "573157503437";
+window.CALLMEBOT_APIKEY = "6626677";

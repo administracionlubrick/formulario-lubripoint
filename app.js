@@ -711,6 +711,9 @@ function initFormSubmit() {
     // Save to Local Database (LocalStorage) as respaldo
     saveAppointmentToStorage(appointment);
 
+    // Aviso automático al WhatsApp del taller
+    notifyTallerWhatsApp(appointment);
+
     // Trigger celebratory confetti effect
     if (typeof confetti === 'function') {
       confetti({
@@ -766,6 +769,34 @@ async function saveAppointmentToCloud(appointment) {
     console.error('[Lubripoint] Error guardando en la nube:', err);
     // No bloqueamos al cliente: queda el respaldo en localStorage.
     return 'local';
+  }
+}
+
+// Envía un aviso automático al WhatsApp del taller vía CallMeBot.
+// Es "fire-and-forget": no bloquea ni afecta la reserva si falla.
+function notifyTallerWhatsApp(a) {
+  try {
+    const phone = window.CALLMEBOT_PHONE;
+    const apikey = window.CALLMEBOT_APIKEY;
+    if (!phone || !apikey || /^TU_/.test(String(apikey))) return;
+
+    const text =
+`🔔 NUEVA CITA - LUBRIPOINT
+Código: ${a.id}
+Cliente: ${a.client} (${a.phone})
+Vehículo: ${a.vehicleType} ${a.brand} ${a.model} (${a.year})
+Placa: ${a.plate}
+Servicio: ${a.service}
+Aceite: ${a.oilViscosity} - ${a.oilBrand}
+Fecha: ${a.date} ${a.time}
+Sede: ${a.branch}
+Obs: ${a.observations}`;
+
+    const url = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(phone)}&text=${encodeURIComponent(text)}&apikey=${encodeURIComponent(apikey)}`;
+    // no-cors: el navegador envía la petición aunque no podamos leer la respuesta
+    fetch(url, { mode: 'no-cors' }).catch(() => {});
+  } catch (err) {
+    console.error('[Lubripoint] No se pudo enviar el aviso de WhatsApp:', err);
   }
 }
 
