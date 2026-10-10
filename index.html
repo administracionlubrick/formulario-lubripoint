@@ -669,14 +669,24 @@
         <!-- Rendered via JS -->
       </section>
 
-      <!-- Barra de herramientas: filtro de fecha y búsqueda -->
+      <!-- Barra de herramientas: filtros, calendario y búsqueda -->
       <section class="dash-toolbar">
         <div class="dash-filter-group">
-          <label><i class="fa-regular fa-calendar"></i> Filtrar por día</label>
+          <label><i class="fa-regular fa-calendar"></i> Filtrar</label>
           <div class="dash-chips" id="dashDateChips">
+            <button type="button" class="dash-chip" data-filter="past">Anteriores</button>
             <button type="button" class="dash-chip active" data-filter="today">Hoy</button>
             <button type="button" class="dash-chip" data-filter="upcoming">Próximas</button>
             <button type="button" class="dash-chip" data-filter="all">Todas</button>
+          </div>
+        </div>
+        <div class="dash-filter-group">
+          <label><i class="fa-regular fa-calendar-days"></i> Elegir un día</label>
+          <div class="dash-datepick">
+            <input type="date" id="dashDatePicker">
+            <button type="button" class="dash-chip" id="dashDateClear" title="Quitar filtro de día" style="display:none;">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
           </div>
         </div>
         <div class="dash-search-box">

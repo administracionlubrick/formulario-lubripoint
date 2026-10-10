@@ -2095,3 +2095,15 @@ body {
   .dash-toolbar { flex-direction: column; align-items: stretch; }
   .dash-search-box { max-width: none; }
 }
+
+/* Selector de día (calendario) en el dashboard */
+.dash-datepick { display: flex; align-items: center; gap: 0.4rem; }
+.dash-datepick input[type="date"] {
+  padding: 0.55rem 0.8rem;
+  background: var(--bg-input); border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm); color: var(--text-main);
+  font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  color-scheme: dark;
+}
+.dash-datepick input[type="date"]:focus { outline: none; border-color: var(--primary); }
+.dash-datepick input[type="date"].active-date { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-glow); }

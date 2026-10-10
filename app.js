@@ -932,6 +932,7 @@ function toggleAdminModal() {
 // Estado del dashboard
 let adminAppointments = [];
 let dashFilter = 'today';
+let dashSelectedDate = '';
 let dashSearch = '';
 let dashListenersReady = false;
 
@@ -953,6 +954,19 @@ function escapeHtml(str) {
 function todayStr() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// Convierte "02:00 PM" -> "14:00" para poder ordenar cronológicamente
+function to24h(timeStr) {
+  if (!timeStr) return '';
+  const m = String(timeStr).match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (!m) return timeStr;
+  let h = parseInt(m[1], 10);
+  const min = m[2];
+  const ap = m[3].toUpperCase();
+  if (ap === 'PM' && h !== 12) h += 12;
+  if (ap === 'AM' && h === 12) h = 0;
+  return `${String(h).padStart(2,'0')}:${min}`;
 }
 
 // Carga las citas (nube o local) y pinta el dashboard
@@ -1015,10 +1029,14 @@ function filteredAppointments() {
   const today = todayStr();
   let list = adminAppointments.slice();
 
-  if (dashFilter === 'today') {
+  if (dashFilter === 'date' && dashSelectedDate) {
+    list = list.filter(a => a.date === dashSelectedDate);
+  } else if (dashFilter === 'today') {
     list = list.filter(a => a.date === today);
   } else if (dashFilter === 'upcoming') {
     list = list.filter(a => a.date >= today);
+  } else if (dashFilter === 'past') {
+    list = list.filter(a => a.date < today);
   }
 
   if (dashSearch) {
@@ -1029,8 +1047,12 @@ function filteredAppointments() {
     );
   }
 
-  // Ordenar por fecha y hora de la cita (más próxima primero)
-  list.sort((a, b) => (a.date + ' ' + (a.time || '')).localeCompare(b.date + ' ' + (b.time || '')));
+  // Ordenar por fecha y hora de la cita.
+  // En "Anteriores" mostramos las más recientes primero (descendente);
+  // en el resto, la más próxima primero (ascendente).
+  const key = (a) => a.date + ' ' + (to24h(a.time) || '');
+  list.sort((a, b) => key(a).localeCompare(key(b)));
+  if (dashFilter === 'past') list.reverse();
   return list;
 }
 
@@ -1099,6 +1121,9 @@ function bindDashControls() {
   dashListenersReady = true;
 
   const chips = document.getElementById('dashDateChips');
+  const datePicker = document.getElementById('dashDatePicker');
+  const dateClear = document.getElementById('dashDateClear');
+
   if (chips) {
     chips.addEventListener('click', (e) => {
       const btn = e.target.closest('.dash-chip');
@@ -1106,6 +1131,38 @@ function bindDashControls() {
       chips.querySelectorAll('.dash-chip').forEach(c => c.classList.remove('active'));
       btn.classList.add('active');
       dashFilter = btn.dataset.filter;
+      // Al usar un chip, se quita el filtro de día específico
+      dashSelectedDate = '';
+      if (datePicker) { datePicker.value = ''; datePicker.classList.remove('active-date'); }
+      if (dateClear) dateClear.style.display = 'none';
+      renderDashList();
+    });
+  }
+
+  // Selector de día específico (calendario)
+  if (datePicker) {
+    datePicker.addEventListener('change', () => {
+      if (!datePicker.value) return;
+      dashSelectedDate = datePicker.value;
+      dashFilter = 'date';
+      datePicker.classList.add('active-date');
+      if (dateClear) dateClear.style.display = 'inline-flex';
+      if (chips) chips.querySelectorAll('.dash-chip').forEach(c => c.classList.remove('active'));
+      renderDashList();
+    });
+  }
+
+  if (dateClear) {
+    dateClear.addEventListener('click', () => {
+      dashSelectedDate = '';
+      dashFilter = 'today';
+      if (datePicker) { datePicker.value = ''; datePicker.classList.remove('active-date'); }
+      dateClear.style.display = 'none';
+      if (chips) {
+        chips.querySelectorAll('.dash-chip').forEach(c => c.classList.remove('active'));
+        const todayChip = chips.querySelector('.dash-chip[data-filter="today"]');
+        if (todayChip) todayChip.classList.add('active');
+      }
       renderDashList();
     });
   }
