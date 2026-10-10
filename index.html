@@ -705,9 +705,14 @@
 
       <footer class="dash-footer">
         <span><i class="fa-solid fa-lock"></i> Acceso restringido · Datos protegidos (Ley 1581 de 2012)</span>
-        <button type="button" class="dash-btn dash-btn-danger" onclick="clearAllAppointments()">
-          <i class="fa-solid fa-trash-can"></i> Limpiar respaldo local
-        </button>
+        <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+          <button type="button" class="dash-btn" onclick="signOutTaller()">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i> Cerrar sesión
+          </button>
+          <button type="button" class="dash-btn dash-btn-danger" onclick="clearAllAppointments()">
+            <i class="fa-solid fa-trash-can"></i> Limpiar respaldo local
+          </button>
+        </div>
       </footer>
     </div>
   </div>

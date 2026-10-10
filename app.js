@@ -904,7 +904,9 @@ function openAdminModal() {
   modal.style.display = 'flex';
 }
 
-function toggleAdminModal() {
+// Punto de entrada al panel. Con Supabase usa login real (Auth);
+// sin Supabase (dev/local) cae a la clave simple de respaldo.
+async function toggleAdminModal() {
   const modal = document.getElementById('adminModal');
   const isOpen = !(modal.style.display === 'none' || !modal.style.display);
 
@@ -913,51 +915,104 @@ function toggleAdminModal() {
     return;
   }
 
-  if (adminUnlocked) {
-    openAdminModal();
+  if (supabaseReady && supa) {
+    try {
+      const { data: { session } } = await supa.auth.getSession();
+      if (session) { openAdminModal(); return; }
+    } catch (err) {
+      console.error('[Lubripoint] Error verificando sesión:', err);
+    }
+    showTallerLogin();
     return;
   }
 
-  const expected = window.ADMIN_PASSCODE || 'lubri2026';
+  // Respaldo sin Supabase: clave simple en el navegador
+  legacyPasscodeGate();
+}
 
-  if (typeof Swal === 'function') {
-    Swal.fire({
-      title: 'Acceso del Taller',
-      input: 'password',
-      inputLabel: 'Ingresa la clave del panel',
-      inputPlaceholder: 'Clave',
-      showCancelButton: true,
-      confirmButtonText: 'Entrar',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#ff6b00',
-      cancelButtonColor: '#30363d',
-      background: '#0f131a',
-      color: '#ffffff',
-      inputAttributes: { autocapitalize: 'off', autocomplete: 'off' }
-    }).then((result) => {
-      if (result.isConfirmed) {
-        if (result.value === expected) {
-          openAdminModal();
-        } else {
-          Swal.fire({
-            icon: 'error',
-            title: 'Clave incorrecta',
-            confirmButtonColor: '#ff6b00',
-            background: '#0f131a',
-            color: '#ffffff'
-          });
-        }
+// Login real del taller contra Supabase Auth
+async function showTallerLogin() {
+  if (typeof Swal !== 'function') { legacyPasscodeGate(); return; }
+
+  const { value: creds } = await Swal.fire({
+    title: '<i class="fa-solid fa-lock"></i> Acceso del Taller',
+    html:
+      '<input id="swEmail" class="swal2-input" placeholder="Correo del taller" type="email" autocomplete="username">' +
+      '<input id="swPass" class="swal2-input" placeholder="Contraseña" type="password" autocomplete="current-password">',
+    focusConfirm: false,
+    showCancelButton: true,
+    confirmButtonText: 'Entrar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#ff6b00',
+    cancelButtonColor: '#30363d',
+    background: '#0f131a',
+    color: '#ffffff',
+    preConfirm: () => {
+      const email = (document.getElementById('swEmail').value || '').trim();
+      const password = document.getElementById('swPass').value || '';
+      if (!email || !password) {
+        Swal.showValidationMessage('Ingresa correo y contraseña');
+        return false;
       }
-    });
-  } else {
-    const val = prompt('Ingresa la clave del panel del taller:');
-    if (val === null) return;
-    if (val === expected) {
-      openAdminModal();
-    } else {
-      alert('Clave incorrecta.');
+      return { email, password };
     }
+  });
+
+  if (!creds) return;
+
+  Swal.fire({
+    title: 'Verificando...',
+    didOpen: () => Swal.showLoading(),
+    allowOutsideClick: false,
+    background: '#0f131a',
+    color: '#ffffff'
+  });
+
+  try {
+    const { error } = await supa.auth.signInWithPassword(creds);
+    if (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'No se pudo iniciar sesión',
+        text: 'Correo o contraseña incorrectos.',
+        confirmButtonColor: '#ff6b00',
+        background: '#0f131a',
+        color: '#ffffff'
+      });
+      return;
+    }
+    Swal.close();
+    openAdminModal();
+  } catch (err) {
+    console.error('[Lubripoint] Error de login:', err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error de conexión',
+      confirmButtonColor: '#ff6b00',
+      background: '#0f131a',
+      color: '#ffffff'
+    });
   }
+}
+
+// Cierra la sesión del taller (botón "Cerrar sesión")
+async function signOutTaller() {
+  try {
+    if (supa && supa.auth) await supa.auth.signOut();
+  } catch (err) {
+    console.error('[Lubripoint] Error cerrando sesión:', err);
+  }
+  closeAdminPanel();
+}
+
+// Respaldo: clave simple (solo cuando Supabase no está configurado)
+function legacyPasscodeGate() {
+  if (adminUnlocked) { openAdminModal(); return; }
+  const expected = window.ADMIN_PASSCODE || 'lubri2026';
+  const val = prompt('Ingresa la clave del panel del taller:');
+  if (val === null) return;
+  if (val === expected) openAdminModal();
+  else alert('Clave incorrecta.');
 }
 
 // Estado del dashboard
