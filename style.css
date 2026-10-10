@@ -705,6 +705,42 @@ body {
   font-weight: 700;
 }
 
+/* Turno ya reservado / no disponible */
+.slot-pill.slot-taken {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.slot-pill.slot-taken span {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: var(--text-muted, #8b949e);
+  text-decoration: line-through;
+}
+.slot-pill.slot-taken:hover span {
+  border-color: rgba(239, 68, 68, 0.35);
+  transform: none;
+  box-shadow: none;
+}
+.slot-pill.slot-taken::after {
+  content: "Ocupado";
+  position: absolute;
+  top: -8px;
+  right: -4px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+.slots-loading {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-muted, #8b949e);
+}
+
 /* Step 4: Summary Card */
 .summary-card {
   margin-top: 1.65rem;

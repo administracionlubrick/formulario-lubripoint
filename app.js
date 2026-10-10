@@ -48,7 +48,32 @@ const VEHICLE_DATA = {
 
 let currentStep = 1;
 
+// ========================================================
+// FIREBASE (persistencia real de citas + disponibilidad)
+// ========================================================
+let db = null;
+let firebaseReady = false;
+
+function initFirebase() {
+  try {
+    const cfg = window.FIREBASE_CONFIG;
+    const configured = cfg && cfg.apiKey && !String(cfg.apiKey).startsWith('TU_');
+    if (!configured || typeof firebase === 'undefined') {
+      console.warn('[Lubripoint] Firebase no configurado. Usando solo almacenamiento local (las citas NO llegan al taller).');
+      return;
+    }
+    firebase.initializeApp(cfg);
+    db = firebase.firestore();
+    firebaseReady = true;
+    console.log('[Lubripoint] Firebase conectado. Las citas se guardarán en la nube.');
+  } catch (err) {
+    console.error('[Lubripoint] Error inicializando Firebase:', err);
+    firebaseReady = false;
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  initFirebase();
   initVehicleTypeSelection();
   populateYears();
   populateBrands();
@@ -57,6 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initServiceSelection();
   initDateConstraints();
   generate40MinTimeSlots();
+  initDateChangeListener();
+  refreshSlotAvailability();
   initFormSubmit();
   loadAppointmentsCount();
   checkCookieConsent();
@@ -242,7 +269,60 @@ function initDateConstraints() {
 
   const minDate = `${yyyy}-${mm}-${dd}`;
   dateInput.min = minDate;
+
+  // El taller atiende Lunes a Sábado. Si hoy es domingo (o la fecha
+  // elegida cae en domingo) avanzamos al siguiente día hábil.
   dateInput.value = minDate;
+  if (isSunday(dateInput.value)) {
+    dateInput.value = nextBusinessDay(dateInput.value);
+  }
+}
+
+// Devuelve true si la fecha 'YYYY-MM-DD' cae en domingo
+function isSunday(dateStr) {
+  if (!dateStr) return false;
+  const parts = dateStr.split('-');
+  // new Date(año, mes, día) evita el corrimiento por zona horaria
+  const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  return d.getDay() === 0;
+}
+
+// Devuelve la siguiente fecha 'YYYY-MM-DD' que no sea domingo
+function nextBusinessDay(dateStr) {
+  const parts = dateStr.split('-');
+  const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  do {
+    d.setDate(d.getDate() + 1);
+  } while (d.getDay() === 0);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+// Al cambiar la fecha: evitar domingos y recargar disponibilidad de turnos
+function initDateChangeListener() {
+  const dateInput = document.getElementById('appointmentDate');
+  if (!dateInput) return;
+  dateInput.addEventListener('change', () => {
+    if (isSunday(dateInput.value)) {
+      const fixed = nextBusinessDay(dateInput.value);
+      dateInput.value = fixed;
+      if (typeof Swal === 'function') {
+        Swal.fire({
+          icon: 'info',
+          title: 'Taller cerrado los domingos',
+          text: 'Atendemos de Lunes a Sábado. Movimos tu cita al siguiente día hábil.',
+          confirmButtonColor: '#ff6b00',
+          background: '#0f131a',
+          color: '#ffffff'
+        });
+      } else {
+        alert('El taller no atiende los domingos. Selecciona otro día (Lunes a Sábado).');
+      }
+    }
+    refreshSlotAvailability();
+  });
 }
 
 // Generate Time Slots strictly every 40 minutes (9:20 AM to 6:00 PM)
@@ -271,6 +351,77 @@ function generate40MinTimeSlots() {
     `;
     container.appendChild(label);
   });
+}
+
+// Consulta las citas ya reservadas para la fecha/sede elegida y
+// deshabilita esos turnos para que no se dupliquen.
+async function refreshSlotAvailability() {
+  const container = document.getElementById('timeSlotsContainer');
+  const dateInput = document.getElementById('appointmentDate');
+  const branchInput = document.getElementById('branch');
+  if (!container || !dateInput || !dateInput.value) return;
+
+  if (!firebaseReady || !db) return; // sin Firebase no hay disponibilidad compartida
+
+  const date = dateInput.value;
+  const branch = branchInput ? branchInput.value : '';
+
+  // Indicador de carga
+  const loading = document.createElement('div');
+  loading.className = 'slots-loading';
+  loading.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Consultando disponibilidad...';
+  container.appendChild(loading);
+
+  try {
+    let query = db.collection('appointments').where('date', '==', date);
+    if (branch) query = query.where('branch', '==', branch);
+    const snap = await query.get();
+
+    const taken = new Set();
+    snap.forEach(doc => {
+      const data = doc.data();
+      if (data && data.time) taken.add(data.time);
+    });
+
+    applyTakenSlots(taken);
+  } catch (err) {
+    console.error('[Lubripoint] No se pudo consultar disponibilidad:', err);
+  } finally {
+    const l = container.querySelector('.slots-loading');
+    if (l) l.remove();
+  }
+}
+
+// Marca como ocupados los turnos en el conjunto 'taken'
+function applyTakenSlots(taken) {
+  const container = document.getElementById('timeSlotsContainer');
+  if (!container) return;
+  const pills = container.querySelectorAll('.slot-pill');
+  let firstFreeInput = null;
+  let selectedWasTaken = false;
+
+  pills.forEach(pill => {
+    const input = pill.querySelector('input[type="radio"]');
+    if (!input) return;
+    const isTaken = taken.has(input.value);
+
+    pill.classList.toggle('slot-taken', isTaken);
+    input.disabled = isTaken;
+
+    if (isTaken) {
+      if (input.checked) {
+        input.checked = false;
+        selectedWasTaken = true;
+      }
+    } else if (!firstFreeInput) {
+      firstFreeInput = input;
+    }
+  });
+
+  // Si el turno que estaba seleccionado quedó ocupado, pasamos al primero libre
+  if (selectedWasTaken && firstFreeInput) {
+    firstFreeInput.checked = true;
+  }
 }
 
 // Wizard Step Navigation
@@ -379,9 +530,33 @@ function validateCurrentStep(step) {
       date.focus();
       return false;
     }
+    if (isSunday(date.value)) {
+      alert('El taller no atiende los domingos. Selecciona un día entre Lunes y Sábado.');
+      date.focus();
+      return false;
+    }
+    const slot = document.querySelector('input[name="timeSlot"]:checked');
+    if (!slot) {
+      alert('Por favor selecciona un horario disponible. Puede que el día elegido esté lleno; prueba otra fecha.');
+      return false;
+    }
   }
 
   return true;
+}
+
+// ========================================================
+// VALIDACIONES DE CONTACTO
+// ========================================================
+function isValidColombianPhone(phone) {
+  // Acepta espacios/guiones; exige 7 a 10 dígitos (fijo o celular Colombia)
+  const digits = (phone || '').replace(/[\s\-()]/g, '');
+  return /^\+?\d{7,13}$/.test(digits) && digits.replace(/\D/g, '').length >= 7;
+}
+
+function isValidEmail(email) {
+  if (!email) return true; // el correo es opcional
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 // Reflect inputs in Step 4 Summary
@@ -425,15 +600,34 @@ function initFormSubmit() {
   const form = document.getElementById('bookingForm');
   if (!form) return;
 
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const fullName = document.getElementById('fullName').value.trim();
     const phone = document.getElementById('phone').value.trim();
-    const email = document.getElementById('email').value.trim() || 'No suministrado';
+    const emailRaw = document.getElementById('email').value.trim();
+    const email = emailRaw || 'No suministrado';
 
     if (!fullName || !phone) {
       alert('Por favor ingresa tu nombre y teléfono para confirmar.');
+      return;
+    }
+
+    if (!isValidColombianPhone(phone)) {
+      alert('El teléfono no parece válido. Ingresa un número de 7 a 10 dígitos (ej. 310 123 4567).');
+      document.getElementById('phone').focus();
+      return;
+    }
+
+    if (!isValidEmail(emailRaw)) {
+      alert('El correo electrónico no tiene un formato válido (ej. nombre@correo.com).');
+      document.getElementById('email').focus();
+      return;
+    }
+
+    const termsConsent = document.getElementById('termsConsent');
+    if (termsConsent && !termsConsent.checked) {
+      alert('Debes aceptar la Política de Tratamiento de Datos y los Términos para continuar.');
       return;
     }
 
@@ -467,10 +661,40 @@ function initFormSubmit() {
       observations: document.getElementById('observations').value.trim() || 'Ninguna',
       branch: document.getElementById('branch').value,
       date: document.getElementById('appointmentDate').value,
-      time: document.querySelector('input[name="timeSlot"]:checked')?.value
+      time: document.querySelector('input[name="timeSlot"]:checked')?.value,
+      marketingConsent: document.getElementById('marketingConsent')?.checked || false,
+      termsConsent: true
     };
 
-    // Save to Local Database (LocalStorage)
+    if (!appointment.time) {
+      alert('Selecciona un horario disponible antes de confirmar.');
+      return;
+    }
+
+    // Guardar en la nube (Firestore) con validación de disponibilidad.
+    // Si Firebase no está configurado, cae a almacenamiento local.
+    const btnSubmit = document.getElementById('btnSubmit');
+    const originalBtnHtml = btnSubmit ? btnSubmit.innerHTML : '';
+    if (btnSubmit) {
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Confirmando...';
+    }
+
+    const saved = await saveAppointmentToCloud(appointment);
+
+    if (btnSubmit) {
+      btnSubmit.disabled = false;
+      btnSubmit.innerHTML = originalBtnHtml;
+    }
+
+    if (saved === 'slot-taken') {
+      alert('¡Lo sentimos! Ese turno acaba de ser reservado por otro cliente. Elige otro horario.');
+      goToStep(3);
+      refreshSlotAvailability();
+      return;
+    }
+
+    // Save to Local Database (LocalStorage) as respaldo
     saveAppointmentToStorage(appointment);
 
     // Trigger celebratory confetti effect
@@ -502,6 +726,35 @@ function initFormSubmit() {
 
     renderSuccessScreen(appointment);
   });
+}
+
+// Genera un ID determinístico por turno para impedir doble reserva
+function slotDocId(appt) {
+  const raw = `${appt.branch}__${appt.date}__${appt.time}`;
+  return raw.replace(/[^a-zA-Z0-9]+/g, '_').slice(0, 480);
+}
+
+// Guarda la cita en Firestore de forma atómica.
+// Devuelve 'ok', 'slot-taken' (turno ya ocupado), o 'local' (sin Firebase).
+async function saveAppointmentToCloud(appointment) {
+  if (!firebaseReady || !db) return 'local';
+
+  const ref = db.collection('appointments').doc(slotDocId(appointment));
+  try {
+    await db.runTransaction(async (tx) => {
+      const existing = await tx.get(ref);
+      if (existing.exists) {
+        throw new Error('SLOT_TAKEN');
+      }
+      tx.set(ref, appointment);
+    });
+    return 'ok';
+  } catch (err) {
+    if (err && err.message === 'SLOT_TAKEN') return 'slot-taken';
+    console.error('[Lubripoint] Error guardando en la nube:', err);
+    // No bloqueamos al cliente: queda el respaldo en localStorage.
+    return 'local';
+  }
 }
 
 function saveAppointmentToStorage(appointment) {
@@ -599,20 +852,94 @@ function resetForm() {
 }
 
 // Workshop Admin View Modal
+let adminUnlocked = false;
+
+function openAdminModal() {
+  const modal = document.getElementById('adminModal');
+  adminUnlocked = true;
+  renderAdminTable();
+  modal.style.display = 'flex';
+}
+
 function toggleAdminModal() {
   const modal = document.getElementById('adminModal');
-  if (modal.style.display === 'none' || !modal.style.display) {
-    renderAdminTable();
-    modal.style.display = 'flex';
-  } else {
+  const isOpen = !(modal.style.display === 'none' || !modal.style.display);
+
+  if (isOpen) {
     modal.style.display = 'none';
+    return;
+  }
+
+  if (adminUnlocked) {
+    openAdminModal();
+    return;
+  }
+
+  const expected = window.ADMIN_PASSCODE || 'lubri2026';
+
+  if (typeof Swal === 'function') {
+    Swal.fire({
+      title: 'Acceso del Taller',
+      input: 'password',
+      inputLabel: 'Ingresa la clave del panel',
+      inputPlaceholder: 'Clave',
+      showCancelButton: true,
+      confirmButtonText: 'Entrar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#ff6b00',
+      cancelButtonColor: '#30363d',
+      background: '#0f131a',
+      color: '#ffffff',
+      inputAttributes: { autocapitalize: 'off', autocomplete: 'off' }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        if (result.value === expected) {
+          openAdminModal();
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Clave incorrecta',
+            confirmButtonColor: '#ff6b00',
+            background: '#0f131a',
+            color: '#ffffff'
+          });
+        }
+      }
+    });
+  } else {
+    const val = prompt('Ingresa la clave del panel del taller:');
+    if (val === null) return;
+    if (val === expected) {
+      openAdminModal();
+    } else {
+      alert('Clave incorrecta.');
+    }
   }
 }
 
-function renderAdminTable() {
-  const list = JSON.parse(localStorage.getItem('lubripoint_appointments') || '[]');
+async function renderAdminTable() {
   const tbody = document.getElementById('appointmentsTableBody');
-  
+  let list = [];
+
+  if (firebaseReady && db) {
+    tbody.innerHTML = `
+      <tr><td colspan="7">
+        <div class="empty-table-msg">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          <p>Cargando citas desde la nube...</p>
+        </div>
+      </td></tr>`;
+    try {
+      const snap = await db.collection('appointments').orderBy('createdAt', 'desc').get();
+      snap.forEach(doc => list.push(doc.data()));
+    } catch (err) {
+      console.error('[Lubripoint] Error leyendo citas de la nube:', err);
+      list = JSON.parse(localStorage.getItem('lubripoint_appointments') || '[]');
+    }
+  } else {
+    list = JSON.parse(localStorage.getItem('lubripoint_appointments') || '[]');
+  }
+
   if (list.length === 0) {
     tbody.innerHTML = `
       <tr>
@@ -647,8 +974,10 @@ function renderAdminTable() {
 function clearAllAppointments() {
   if (typeof Swal === 'function') {
     Swal.fire({
-      title: '¿Vaciar registros de prueba?',
-      text: 'Se eliminarán todas las citas almacenadas localmente.',
+      title: '¿Vaciar registros locales?',
+      text: firebaseReady
+        ? 'Se borra solo el respaldo de ESTE navegador. Las citas en la nube NO se eliminan.'
+        : 'Se eliminarán todas las citas almacenadas localmente.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#ef4444',
