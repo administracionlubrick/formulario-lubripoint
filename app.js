@@ -87,7 +87,21 @@ document.addEventListener('DOMContentLoaded', () => {
   initFormSubmit();
   loadAppointmentsCount();
   checkCookieConsent();
+  initAdminRoute();
 });
+
+// Acceso del taller por enlace oculto: /acceso-citas-taller
+// (o ?taller). Al entrar por esa ruta se pide la clave y, si es
+// correcta, se abre el panel de citas.
+function initAdminRoute() {
+  const path = (window.location.pathname || '').toLowerCase();
+  const hasQuery = /[?&]taller\b/i.test(window.location.search);
+  const isAdminRoute = path.includes('acceso-citas-taller') || hasQuery;
+  if (isAdminRoute) {
+    // Pequeño retraso para que la página termine de montar antes del prompt
+    setTimeout(() => toggleAdminModal(), 300);
+  }
+}
 
 // 1. Populates Years dropdown (2026 to 1995 + "Anterior a 1995")
 function populateYears() {

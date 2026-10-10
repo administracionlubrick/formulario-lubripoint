@@ -6,7 +6,14 @@ const PORT = 3000;
 
 const server = http.createServer((req, res) => {
   let reqUrl = req.url.split('?')[0];
-  let filePath = path.join(__dirname, reqUrl === '/' ? 'index.html' : reqUrl);
+
+  // Rutas "limpias" sin extensión (ej. /acceso-citas-taller) sirven el
+  // formulario; el enrutado lo maneja el JavaScript del lado del cliente.
+  if (reqUrl === '/' || !path.extname(reqUrl)) {
+    reqUrl = '/index.html';
+  }
+
+  let filePath = path.join(__dirname, reqUrl);
   let ext = path.extname(filePath);
 
   let contentType = 'text/html';
