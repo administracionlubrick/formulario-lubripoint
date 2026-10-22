@@ -47,6 +47,44 @@ const VEHICLE_DATA = {
 };
 
 let currentStep = 1;
+// Momento en que se cargó el formulario (para el filtro anti-bot por tiempo)
+const formLoadTime = Date.now();
+
+// ========================================================
+// ANTI-SPAM (honeypot + tiempo mínimo + límite por navegador)
+// ========================================================
+// Devuelve un motivo de bloqueo (string) o null si puede continuar.
+function antiSpamReason() {
+  // 1. Honeypot: si el campo trampa tiene algo, es un bot
+  const hp = document.getElementById('hpWebsite');
+  if (hp && hp.value.trim() !== '') return 'bot';
+
+  // 2. Tiempo mínimo: un humano no llena todo en < 4 segundos
+  if (Date.now() - formLoadTime < 4000) return 'rapido';
+
+  // 3. Límite por navegador: máx. 3 citas en 15 minutos
+  try {
+    const now = Date.now();
+    const win = 15 * 60 * 1000;
+    const list = JSON.parse(localStorage.getItem('lubripoint_booking_times') || '[]')
+      .filter(t => now - t < win);
+    if (list.length >= 3) return 'limite';
+  } catch (e) { /* si localStorage falla, no bloqueamos */ }
+
+  return null;
+}
+
+// Registra una reserva exitosa para el control de límite
+function recordBookingTime() {
+  try {
+    const now = Date.now();
+    const win = 15 * 60 * 1000;
+    const list = JSON.parse(localStorage.getItem('lubripoint_booking_times') || '[]')
+      .filter(t => now - t < win);
+    list.push(now);
+    localStorage.setItem('lubripoint_booking_times', JSON.stringify(list));
+  } catch (e) { /* no crítico */ }
+}
 
 // ========================================================
 // SUPABASE (persistencia real de citas + disponibilidad)
@@ -617,6 +655,21 @@ function initFormSubmit() {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    // Filtro anti-spam antes de procesar
+    const spam = antiSpamReason();
+    if (spam === 'bot') {
+      // Bot detectado: cortamos en silencio (no damos pistas)
+      return;
+    }
+    if (spam === 'rapido') {
+      alert('Tómate un momento para revisar tus datos e intenta de nuevo en unos segundos.');
+      return;
+    }
+    if (spam === 'limite') {
+      alert('Has agendado varias citas en los últimos minutos. Si necesitas otra, intenta más tarde o escríbenos por WhatsApp.');
+      return;
+    }
+
     const fullName = document.getElementById('fullName').value.trim();
     const phone = document.getElementById('phone').value.trim();
     const emailRaw = document.getElementById('email').value.trim();
@@ -710,6 +763,7 @@ function initFormSubmit() {
 
     // Save to Local Database (LocalStorage) as respaldo
     saveAppointmentToStorage(appointment);
+    recordBookingTime(); // para el límite anti-spam por navegador
 
     // El aviso al taller (WhatsApp + Telegram) lo envía Supabase del
     // lado del servidor (Edge Function "notify-taller" disparada por el

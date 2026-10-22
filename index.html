@@ -96,6 +96,13 @@
       <!-- Form Card -->
       <div class="booking-card">
         <form id="bookingForm" autocomplete="off">
+
+          <!-- Anti-spam honeypot: invisible para humanos; si se llena, es un bot -->
+          <div class="hp-field" aria-hidden="true">
+            <label for="hpWebsite">No llenar este campo</label>
+            <input type="text" id="hpWebsite" name="website" tabindex="-1" autocomplete="off">
+          </div>
+
           
           <!-- STEP 1: VEHÍCULO -->
           <section class="wizard-step active" id="step1">
