@@ -22,19 +22,19 @@ window.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXB
 window.ADMIN_PASSCODE = "Lubri2026*";
 
 // ============================================================
-//  AVISO AUTOMÁTICO AL TALLER POR WHATSAPP (CallMeBot)
+//  AVISOS AL TALLER (WhatsApp + Telegram)
 // ============================================================
-// Número del taller con indicativo de país, SIN "+" ni espacios
-// (Colombia = 57). Y la APIKEY que te dio CallMeBot.
-// Si dejas el número vacío, el aviso automático queda desactivado.
-window.CALLMEBOT_PHONE = "573157503437";
-window.CALLMEBOT_APIKEY = "6626677";
-
-// ============================================================
-//  AVISO AUTOMÁTICO AL TALLER POR TELEGRAM (respaldo confiable)
-// ============================================================
-// Token del bot (de @BotFather) y chat_id del destinatario (el taller).
-// Telegram es gratis y muy confiable; sirve de respaldo por si CallMeBot
-// se pausa. Si dejas el token vacío, el aviso por Telegram se desactiva.
-window.TELEGRAM_BOT_TOKEN = "8921127883:AAFq_5gfqOWBTZKZ5XpZ5yZbqyzQx72_1Gk";
-window.TELEGRAM_CHAT_ID = "5169671880";
+// Los avisos ahora los envía SUPABASE del lado del servidor
+// (Edge Function "notify-taller" + Database Webhook sobre INSERT),
+// así los tokens quedan OCULTOS en los Secrets de Supabase y NO en
+// este repositorio público.
+//
+// Estas variables se dejan vacías a propósito: desactivan el envío
+// desde el navegador para que no lleguen avisos duplicados.
+// Para cambiar el número/chat del taller, se edita en Supabase
+// (Edge Functions > Secrets): CALLMEBOT_PHONE, CALLMEBOT_APIKEY,
+// TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID.
+window.CALLMEBOT_PHONE = "";
+window.CALLMEBOT_APIKEY = "";
+window.TELEGRAM_BOT_TOKEN = "";
+window.TELEGRAM_CHAT_ID = "";

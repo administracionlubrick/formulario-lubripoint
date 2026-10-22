@@ -711,8 +711,10 @@ function initFormSubmit() {
     // Save to Local Database (LocalStorage) as respaldo
     saveAppointmentToStorage(appointment);
 
-    // Aviso automático al taller (WhatsApp + Telegram)
-    notifyTaller(appointment);
+    // El aviso al taller (WhatsApp + Telegram) lo envía Supabase del
+    // lado del servidor (Edge Function "notify-taller" disparada por el
+    // Database Webhook sobre INSERT). No se envía desde el navegador
+    // para no duplicar avisos ni exponer los tokens en el repo público.
 
     // Trigger celebratory confetti effect
     if (typeof confetti === 'function') {
@@ -772,60 +774,12 @@ async function saveAppointmentToCloud(appointment) {
   }
 }
 
-// Envía un aviso automático al WhatsApp del taller vía CallMeBot.
-// Es "fire-and-forget": no bloquea ni afecta la reserva si falla.
-function notifyTallerWhatsApp(a) {
-  try {
-    const phone = window.CALLMEBOT_PHONE;
-    const apikey = window.CALLMEBOT_APIKEY;
-    if (!phone || !apikey || /^TU_/.test(String(apikey))) return;
-
-    const text = buildTallerNotice(a);
-    const url = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(phone)}&text=${encodeURIComponent(text)}&apikey=${encodeURIComponent(apikey)}`;
-    // no-cors: el navegador envía la petición aunque no podamos leer la respuesta
-    fetch(url, { mode: 'no-cors' }).catch(() => {});
-  } catch (err) {
-    console.error('[Lubripoint] No se pudo enviar el aviso de WhatsApp:', err);
-  }
-}
-
-// Construye el texto del aviso de una cita (compartido por los canales)
-function buildTallerNotice(a) {
-  return (
-`🔔 NUEVA CITA - LUBRIPOINT
-Código: ${a.id}
-Cliente: ${a.client} (${a.phone})
-Vehículo: ${a.vehicleType} ${a.brand} ${a.model} (${a.year})
-Placa: ${a.plate}
-Servicio: ${a.service}
-Aceite: ${a.oilViscosity} - ${a.oilBrand}
-Fecha: ${a.date} ${a.time}
-Sede: ${a.branch}
-Obs: ${a.observations}`
-  );
-}
-
-// Envía el aviso al taller por Telegram (gratis y confiable).
-// Fire-and-forget: no bloquea ni afecta la reserva si falla.
-function notifyTallerTelegram(a) {
-  try {
-    const token = window.TELEGRAM_BOT_TOKEN;
-    const chatId = window.TELEGRAM_CHAT_ID;
-    if (!token || !chatId || /^TU_/.test(String(token))) return;
-
-    const text = buildTallerNotice(a);
-    const url = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${encodeURIComponent(chatId)}&text=${encodeURIComponent(text)}`;
-    fetch(url, { mode: 'no-cors' }).catch(() => {});
-  } catch (err) {
-    console.error('[Lubripoint] No se pudo enviar el aviso de Telegram:', err);
-  }
-}
-
-// Dispara todos los avisos configurados al taller (WhatsApp + Telegram)
-function notifyTaller(appointment) {
-  notifyTallerWhatsApp(appointment);
-  notifyTallerTelegram(appointment);
-}
+// NOTA: el aviso al taller (WhatsApp vía CallMeBot + Telegram) ya NO se
+// envía desde el navegador. Lo hace Supabase del lado del servidor con la
+// Edge Function "notify-taller" (disparada por un Database Webhook sobre
+// INSERT en la tabla appointments). Así los tokens quedan ocultos en los
+// Secrets de Supabase, fuera de este repositorio público.
+// Ver: supabase/functions/notify-taller/index.ts
 
 function saveAppointmentToStorage(appointment) {
   try {
