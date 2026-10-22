@@ -29,3 +29,12 @@ window.ADMIN_PASSCODE = "Lubri2026*";
 // Si dejas el número vacío, el aviso automático queda desactivado.
 window.CALLMEBOT_PHONE = "573157503437";
 window.CALLMEBOT_APIKEY = "6626677";
+
+// ============================================================
+//  AVISO AUTOMÁTICO AL TALLER POR TELEGRAM (respaldo confiable)
+// ============================================================
+// Token del bot (de @BotFather) y chat_id del destinatario (el taller).
+// Telegram es gratis y muy confiable; sirve de respaldo por si CallMeBot
+// se pausa. Si dejas el token vacío, el aviso por Telegram se desactiva.
+window.TELEGRAM_BOT_TOKEN = "8921127883:AAFq_5gfqOWBTZKZ5XpZ5yZbqyzQx72_1Gk";
+window.TELEGRAM_CHAT_ID = "5169671880";
