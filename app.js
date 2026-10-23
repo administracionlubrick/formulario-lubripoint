@@ -49,6 +49,10 @@ const VEHICLE_DATA = {
 let currentStep = 1;
 // Momento en que se cargó el formulario (para el filtro anti-bot por tiempo)
 const formLoadTime = Date.now();
+// Anticipación mínima (minutos) para agendar un turno del mismo día
+const SLOT_LEAD_MIN = 30;
+// Turnos ocupados (desde Supabase) para la fecha/sede elegida
+let takenSlots = new Set();
 
 // ========================================================
 // ANTI-SPAM (honeypot + tiempo mínimo + límite por navegador)
@@ -306,28 +310,35 @@ function initServiceSelection() {
   });
 }
 
-// Set Minimum Date to Today
+// Minutos transcurridos del día actual (0-1439)
+function nowMinutes() {
+  const n = new Date();
+  return n.getHours() * 60 + n.getMinutes();
+}
+
+// Minuto de inicio de un turno ("05:20 PM" -> 1040)
+function slotStartMinutes(timeStr) {
+  const [h, m] = to24h(timeStr).split(':').map(Number);
+  return h * 60 + m;
+}
+
+// Primera fecha hábil en la que aún se puede agendar.
+// Si hoy ya pasó el último turno útil (con la anticipación mínima) o es
+// domingo, devuelve el siguiente día hábil.
+function earliestBookableDate() {
+  const today = todayStr();
+  const lastSlot = slotStartMinutes('05:20 PM'); // último turno del día
+  const hoyDisponible = !isSunday(today) && (nowMinutes() + SLOT_LEAD_MIN) <= lastSlot;
+  return hoyDisponible ? today : nextBusinessDay(today);
+}
+
+// Fija la fecha mínima/por defecto según la hora actual
 function initDateConstraints() {
   const dateInput = document.getElementById('appointmentDate');
   if (!dateInput) return;
-  
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  let mm = today.getMonth() + 1;
-  let dd = today.getDate();
-
-  if (mm < 10) mm = '0' + mm;
-  if (dd < 10) dd = '0' + dd;
-
-  const minDate = `${yyyy}-${mm}-${dd}`;
-  dateInput.min = minDate;
-
-  // El taller atiende Lunes a Sábado. Si hoy es domingo (o la fecha
-  // elegida cae en domingo) avanzamos al siguiente día hábil.
-  dateInput.value = minDate;
-  if (isSunday(dateInput.value)) {
-    dateInput.value = nextBusinessDay(dateInput.value);
-  }
+  const earliest = earliestBookableDate();
+  dateInput.min = earliest;   // el navegador no deja elegir días anteriores
+  dateInput.value = earliest; // arranca en el primer día disponible
 }
 
 // Devuelve true si la fecha 'YYYY-MM-DD' cae en domingo
@@ -403,6 +414,9 @@ function generate40MinTimeSlots() {
     `;
     container.appendChild(label);
   });
+
+  // Aplica restricciones de ocupado/pasado al estado inicial
+  recomputeSlotStates();
 }
 
 // Consulta las citas ya reservadas para la fecha/sede elegida y
@@ -413,7 +427,9 @@ async function refreshSlotAvailability() {
   const branchInput = document.getElementById('branch');
   if (!container || !dateInput || !dateInput.value) return;
 
-  if (!supabaseReady || !supa) return; // sin Supabase no hay disponibilidad compartida
+  // Sin Supabase no hay disponibilidad compartida, pero igual aplicamos
+  // la restricción de turnos pasados del mismo día.
+  if (!supabaseReady || !supa) { recomputeSlotStates(); return; }
 
   const date = dateInput.value;
   const branch = branchInput ? branchInput.value : '';
@@ -434,45 +450,55 @@ async function refreshSlotAvailability() {
     (data || []).forEach(row => {
       if (row && row.appt_time) taken.add(row.appt_time);
     });
-
-    applyTakenSlots(taken);
+    takenSlots = taken;
   } catch (err) {
     console.error('[Lubripoint] No se pudo consultar disponibilidad:', err);
   } finally {
     const l = container.querySelector('.slots-loading');
     if (l) l.remove();
   }
+
+  recomputeSlotStates();
 }
 
-// Marca como ocupados los turnos en el conjunto 'taken'
-function applyTakenSlots(taken) {
+// Deshabilita turnos por dos motivos: ya ocupados (desde Supabase) o ya
+// pasados cuando la cita es para hoy (con la anticipación mínima).
+function recomputeSlotStates() {
   const container = document.getElementById('timeSlotsContainer');
-  if (!container) return;
+  const dateInput = document.getElementById('appointmentDate');
+  if (!container || !dateInput) return;
+
+  const isToday = dateInput.value === todayStr();
+  const minStart = nowMinutes() + SLOT_LEAD_MIN;
+
   const pills = container.querySelectorAll('.slot-pill');
-  let firstFreeInput = null;
-  let selectedWasTaken = false;
+  let firstFree = null;
+  let selectedDisabled = false;
 
   pills.forEach(pill => {
     const input = pill.querySelector('input[type="radio"]');
     if (!input) return;
-    const isTaken = taken.has(input.value);
 
-    pill.classList.toggle('slot-taken', isTaken);
-    input.disabled = isTaken;
+    const taken = takenSlots.has(input.value);
+    const past = isToday && slotStartMinutes(input.value) < minStart;
+    const disabled = taken || past;
 
-    if (isTaken) {
-      if (input.checked) {
-        input.checked = false;
-        selectedWasTaken = true;
-      }
-    } else if (!firstFreeInput) {
-      firstFreeInput = input;
+    pill.classList.toggle('slot-past', past);
+    pill.classList.toggle('slot-taken', taken && !past);
+    input.disabled = disabled;
+
+    if (disabled) {
+      if (input.checked) { input.checked = false; selectedDisabled = true; }
+    } else if (!firstFree) {
+      firstFree = input;
     }
   });
 
-  // Si el turno que estaba seleccionado quedó ocupado, pasamos al primero libre
-  if (selectedWasTaken && firstFreeInput) {
-    firstFreeInput.checked = true;
+  // Si el seleccionado quedó deshabilitado, o no hay ninguno marcado,
+  // seleccionamos el primer turno libre disponible.
+  const haySeleccion = container.querySelector('input[name="timeSlot"]:checked');
+  if ((selectedDisabled || !haySeleccion) && firstFree) {
+    firstFree.checked = true;
   }
 }
 

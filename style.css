@@ -733,6 +733,35 @@ body {
   padding: 1px 6px;
   border-radius: 999px;
 }
+
+/* Turno del mismo día que ya pasó (o sin la anticipación mínima) */
+.slot-pill.slot-past {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.slot-pill.slot-past span {
+  background: rgba(148, 163, 184, 0.06);
+  border-color: rgba(148, 163, 184, 0.25);
+  color: var(--text-dim, #64748b);
+  text-decoration: line-through;
+}
+.slot-pill.slot-past:hover span {
+  border-color: rgba(148, 163, 184, 0.25);
+  transform: none;
+  box-shadow: none;
+}
+.slot-pill.slot-past::after {
+  content: "Pasó";
+  position: absolute;
+  top: -8px;
+  right: -4px;
+  background: #64748b;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
 .slots-loading {
   grid-column: 1 / -1;
   text-align: center;
